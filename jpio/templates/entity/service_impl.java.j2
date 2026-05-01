@@ -1,0 +1,113 @@
+package {{ base_package }}.service;
+
+import {{ base_package }}.dto.{{ entity_name }}DTO;
+import {{ base_package }}.entity.{{ entity_name }};
+import {{ base_package }}.exception.{{ entity_name }}NotFoundException;
+import {{ base_package }}.mapper.{{ entity_name }}Mapper;
+import {{ base_package }}.repository.{{ entity_name }}Repository;
+{% for relation in relations %}
+import {{ base_package }}.entity.{{ relation.target }};
+import {{ base_package }}.repository.{{ relation.target }}Repository;
+{% endfor %}
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+{% if relations %}
+import java.util.stream.Collectors;
+{% endif %}
+
+@Service
+@RequiredArgsConstructor
+@Transactional
+public class {{ entity_name }}ServiceImpl implements {{ entity_name }}Service {
+
+    private final {{ entity_name }}Repository {{ entity_lower }}Repository;
+    private final {{ entity_name }}Mapper     {{ entity_lower }}Mapper;
+{% for relation in relations %}
+    private final {{ relation.target }}Repository {{ relation.target_lower }}Repository;
+{% endfor %}
+
+    // ── findAll ──────────────────────────────────────────────────────────────
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<{{ entity_name }}DTO> findAll() {
+        return {{ entity_lower }}Mapper.toDTOList({{ entity_lower }}Repository.findAll());
+    }
+
+    // ── findById ─────────────────────────────────────────────────────────────
+
+    @Override
+    @Transactional(readOnly = true)
+    public {{ entity_name }}DTO findById(Long id) {
+        {{ entity_name }} entity = {{ entity_lower }}Repository.findById(id)
+                .orElseThrow(() -> new {{ entity_name }}NotFoundException(id));
+        return {{ entity_lower }}Mapper.toDTO(entity);
+    }
+
+    // ── create ───────────────────────────────────────────────────────────────
+
+    @Override
+    public {{ entity_name }}DTO create({{ entity_name }}DTO dto) {
+        {{ entity_name }} entity = {{ entity_lower }}Mapper.toEntity(dto);
+        _resolveRelations(entity, dto);
+        return {{ entity_lower }}Mapper.toDTO({{ entity_lower }}Repository.save(entity));
+    }
+
+    // ── update ───────────────────────────────────────────────────────────────
+
+    @Override
+    public {{ entity_name }}DTO update(Long id, {{ entity_name }}DTO dto) {
+        {{ entity_name }} existing = {{ entity_lower }}Repository.findById(id)
+                .orElseThrow(() -> new {{ entity_name }}NotFoundException(id));
+
+{% for field in fields %}
+        existing.set{{ field.capitalized }}(dto.get{{ field.capitalized }}());
+{% endfor %}
+        _resolveRelations(existing, dto);
+        return {{ entity_lower }}Mapper.toDTO({{ entity_lower }}Repository.save(existing));
+    }
+
+    // ── delete ───────────────────────────────────────────────────────────────
+
+    @Override
+    public void delete(Long id) {
+        if (!{{ entity_lower }}Repository.existsById(id)) {
+            throw new {{ entity_name }}NotFoundException(id);
+        }
+        {{ entity_lower }}Repository.deleteById(id);
+    }
+
+    // ── résolution des relations ─────────────────────────────────────────────
+
+    private void _resolveRelations({{ entity_name }} entity, {{ entity_name }}DTO dto) {
+{% for relation in relations %}
+    {% if relation.kind in ("OneToMany", "ManyToMany") %}
+        if (dto.get{{ relation.field_name | capitalize }}Ids() != null) {
+            List<{{ relation.target }}> {{ relation.field_name }} =
+                    dto.get{{ relation.field_name | capitalize }}Ids().stream()
+                            .map(relId -> {{ relation.target_lower }}Repository
+                                    .findById(relId)
+                                    .orElseThrow(() -> new RuntimeException(
+                                            "{{ relation.target }} introuvable : id=" + relId)))
+                            .collect(Collectors.toList());
+            entity.set{{ relation.field_name | capitalize }}({{ relation.field_name }});
+        }
+    {% elif relation.kind == "ManyToOne" %}
+        if (dto.get{{ relation.target }}Id() != null) {
+            {{ relation.target }} {{ relation.target_lower }} =
+                    {{ relation.target_lower }}Repository
+                            .findById(dto.get{{ relation.target }}Id())
+                            .orElseThrow(() -> new RuntimeException(
+                                    "{{ relation.target }} introuvable : id=" + dto.get{{ relation.target }}Id()));
+            entity.set{{ relation.target }}({{ relation.target_lower }});
+        }
+    {% endif %}
+{% endfor %}
+{% if not relations %}
+        // Aucune relation à résoudre pour cette entité.
+{% endif %}
+    }
+}

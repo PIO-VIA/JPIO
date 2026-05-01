@@ -1,0 +1,17 @@
+package {{ base_package }}.repository;
+
+import {{ base_package }}.entity.{{ entity_name }};
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+import java.util.List;
+
+@Repository
+public interface {{ entity_name }}Repository extends JpaRepository<{{ entity_name }}, Long> {
+
+    // ── Requêtes générées automatiquement par Spring Data ───────────────────
+{% for field in fields %}
+    List<{{ entity_name }}> findBy{{ field.capitalized }}({{ field.java_type }} {{ field.name }});
+{% endfor %}
+
+}

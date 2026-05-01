@@ -1,0 +1,19 @@
+package {{ base_package }}.service;
+
+import {{ base_package }}.dto.{{ entity_name }}DTO;
+
+import java.util.List;
+
+public interface {{ entity_name }}Service {
+
+    List<{{ entity_name }}DTO> findAll();
+
+    {{ entity_name }}DTO findById(Long id);
+
+    {{ entity_name }}DTO create({{ entity_name }}DTO dto);
+
+    {{ entity_name }}DTO update(Long id, {{ entity_name }}DTO dto);
+
+    void delete(Long id);
+
+}

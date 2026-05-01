@@ -1,0 +1,57 @@
+package {{ base_package }}.entity;
+
+import jakarta.persistence.*;
+import lombok.*;
+{% for import in extra_imports %}
+import {{ import }};
+{% endfor %}
+{% for relation in relations %}
+import {{ base_package }}.entity.{{ relation.target }};
+{% endfor %}
+import java.util.List;
+
+@Entity
+@Table(name = "{{ entity_name | lower }}s")
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class {{ entity_name }} {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+{% for field in fields %}
+    {% if not field.nullable %}
+    @Column(nullable = false)
+    {% endif %}
+    private {{ field.java_type }} {{ field.name }};
+
+{% endfor %}
+{% for relation in relations %}
+    {% if relation.kind == "ManyToMany" and relation.owner %}
+    @ManyToMany
+    @JoinTable(
+        name = "{{ entity_name | lower }}_{{ relation.target | lower }}",
+        joinColumns = @JoinColumn(name = "{{ entity_name | lower }}_id"),
+        inverseJoinColumns = @JoinColumn(name = "{{ relation.target | lower }}_id")
+    )
+    private List<{{ relation.target }}> {{ relation.field_name }};
+
+    {% elif relation.kind == "ManyToMany" and not relation.owner %}
+    @ManyToMany(mappedBy = "{{ relation.mapped_by }}")
+    private List<{{ relation.target }}> {{ relation.field_name }};
+
+    {% elif relation.kind == "OneToMany" %}
+    @OneToMany(mappedBy = "{{ relation.mapped_by }}", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<{{ relation.target }}> {{ relation.field_name }};
+
+    {% elif relation.kind == "ManyToOne" %}
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "{{ relation.target | lower }}_id")
+    private {{ relation.target }} {{ relation.target_lower }};
+
+    {% endif %}
+{% endfor %}
+}
