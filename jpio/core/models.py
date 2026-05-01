@@ -46,6 +46,48 @@ SUPPORTED_RELATIONS = [
 # ---------------------------------------------------------------------------
 
 @dataclass
+class FolderMapping:
+    """
+    Mappe chaque couche logique du projet à un dossier réel sur le disque.
+    Permet de s'adapter aux projets existants qui utilisent des noms
+    différents (ex: 'model' au lieu d' 'entity').
+    """
+    entity:     str = "models/entity"
+    dto:        str = "dto"
+    mapper:     str = "mapper"
+    repository: str = "repository"
+    service:    str = "service"
+    controller: str = "controller"
+    exception:  str = "exception"
+    config:     str = "config"
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "FolderMapping":
+        return cls(
+            entity=data.get("entity", "models/entity"),
+            dto=data.get("dto", "dto"),
+            mapper=data.get("mapper", "mapper"),
+            repository=data.get("repository", "repository"),
+            service=data.get("service", "service"),
+            controller=data.get("controller", "controller"),
+            exception=data.get("exception", "exception"),
+            config=data.get("config", "config")
+        )
+
+    def to_dict(self) -> dict:
+        return {
+            "entity": self.entity,
+            "dto": self.dto,
+            "mapper": self.mapper,
+            "repository": self.repository,
+            "service": self.service,
+            "controller": self.controller,
+            "exception": self.exception,
+            "config": self.config
+        }
+
+
+@dataclass
 class Enum:
     """Représente une énumération Java."""
     name: str
@@ -247,6 +289,7 @@ class ProjectConfig:
     entities: list[Entity] = field(default_factory=list)
     enums: list[Enum] = field(default_factory=list)
     pom_features: PomFeatures = field(default_factory=PomFeatures)
+    folder_mapping: FolderMapping = field(default_factory=FolderMapping)
 
     @property
     def package_path(self) -> str:
@@ -261,12 +304,14 @@ class ProjectConfig:
         entities = [Entity.from_dict(e) for e in data.get("entities", [])]
         enums = [Enum.from_dict(e) for e in data.get("enums", [])]
         pom_features = PomFeatures.from_dict(data.get("pom_features", {}))
+        folder_mapping = FolderMapping.from_dict(data.get("folder_mapping", {}))
         return cls(
             base_package=data["base_package"],
             api_prefix=data.get("api_prefix", "/api/v1"),
             entities=entities,
             enums=enums,
-            pom_features=pom_features
+            pom_features=pom_features,
+            folder_mapping=folder_mapping
         )
 
     def to_dict(self) -> dict:
@@ -275,5 +320,6 @@ class ProjectConfig:
             "api_prefix": self.api_prefix,
             "entities": [e.to_dict() for e in self.entities],
             "enums": [e.to_dict() for e in self.enums],
-            "pom_features": self.pom_features.to_dict()
+            "pom_features": self.pom_features.to_dict(),
+            "folder_mapping": self.folder_mapping.to_dict()
         }

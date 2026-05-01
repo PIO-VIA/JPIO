@@ -10,9 +10,21 @@ import re
 from pathlib import Path
 import logging
 
-from jpio.core.models import PomFeatures
+from jpio.core.models import PomFeatures, FolderMapping
 
 logger = logging.getLogger(__name__)
+
+
+EXPECTED_FOLDERS = {
+    "controller": ["controller", "controllers", "ctrl", "web", "rest", "api"],
+    "service":    ["service", "services", "svc", "business"],
+    "repository": ["repository", "repositories", "repo", "dao"],
+    "entity":     ["entity", "entities", "model", "models", "domain"],
+    "dto":        ["dto", "dtos", "transfer", "payload"],
+    "mapper":     ["mapper", "mappers", "converter"],
+    "exception":  ["exception", "exceptions", "error", "errors"],
+    "config":     ["config", "configuration", "cfg"],
+}
 
 
 # ---------------------------------------------------------------------------
@@ -98,6 +110,32 @@ def detect_config_format(path: Path = Path(".")) -> tuple[str, Path]:
         return "properties", prop_path
 
     return found[0]
+
+
+def detect_existing_folders(package_path: Path) -> FolderMapping:
+    """
+    Scanne le dossier du package Java pour détecter les dossiers existants.
+    Retourne un FolderMapping avec les noms réels trouvés.
+    """
+    mapping_dict = {}
+    if package_path.exists():
+        for layer, synonyms in EXPECTED_FOLDERS.items():
+            for syn in synonyms:
+                path = package_path / syn
+                if path.is_dir():
+                    # Cas spécial pour 'models/entity'
+                    if syn == "models" and layer == "entity":
+                        if (path / "entity").is_dir():
+                            mapping_dict[layer] = "models/entity"
+                            break
+                        if (path / "model").is_dir():
+                            mapping_dict[layer] = "models/model"
+                            break
+                    
+                    mapping_dict[layer] = syn
+                    break
+                    
+    return FolderMapping(**mapping_dict)
 
 
 def analyze_pom(path: Path = Path(".")) -> PomFeatures:

@@ -7,7 +7,7 @@ pour différentes configurations d'entités et de relations.
 """
 
 import pytest
-from jpio.core.models import ProjectConfig, Entity, Field, Relation, PomFeatures
+from jpio.core.models import ProjectConfig, Entity, Field, Relation, PomFeatures, FolderMapping
 from jpio.core.generator import generate_all
 from pathlib import Path
 
@@ -383,3 +383,22 @@ class TestPomFeatures:
         expected_key = "__append__:src/main/resources/application.yaml"
         assert expected_key in output
         assert "springdoc:" in output[expected_key]
+
+    def test_custom_folder_mapping_paths(self):
+        mapping = FolderMapping(
+            entity="domain/models",
+            controller="web/api",
+            service="logic/services"
+        )
+        config = ProjectConfig(
+            base_package="com.pio.test",
+            api_prefix="/api/v1",
+            entities=[Entity(name="Product")],
+            folder_mapping=mapping
+        )
+        output = generate_all(config)
+        base = "src/main/java/com/pio/test"
+        
+        assert f"{base}/domain/models/Product.java" in output
+        assert f"{base}/web/api/ProductController.java" in output
+        assert f"{base}/logic/services/ProductService.java" in output

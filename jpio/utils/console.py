@@ -100,6 +100,36 @@ def print_summary(
 
 
 # ---------------------------------------------------------------------------
+# Rapport de détection des dossiers
+# ---------------------------------------------------------------------------
+
+def print_folder_mapping_report(mapping) -> None:
+    """
+    Affiche un tableau récapitulatif des dossiers détectés.
+    
+    mapping : objet FolderMapping
+    """
+    table = Table(
+        title="[bold cyan]JPIO — Correspondance des dossiers[/bold cyan]",
+        box=box.ROUNDED,
+        border_style="cyan",
+        header_style="bold white",
+    )
+
+    table.add_column("Couche logique", style="dim white")
+    table.add_column("Dossier réel",   style="bold cyan")
+
+    # On trie pour avoir un affichage propre
+    sorted_mapping = sorted(mapping.to_dict().items())
+
+    for layer, folder in sorted_mapping:
+        table.add_row(layer.capitalize(), folder)
+
+    console.print(table)
+    console.print()
+
+
+# ---------------------------------------------------------------------------
 # Table de scan (jpio scan)
 # ---------------------------------------------------------------------------
 

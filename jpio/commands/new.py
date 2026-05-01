@@ -12,6 +12,7 @@ from pathlib import Path
 import click
 
 from jpio.core.analyzer import run_wizard
+from jpio.core.models import FolderMapping
 from jpio.core.generator import generate_all
 from jpio.core.writer import write_all
 from jpio.utils.console import (
@@ -20,11 +21,15 @@ from jpio.utils.console import (
     print_error,
     print_info,
     print_summary,
+    print_folder_mapping_report,
 )
 from jpio.utils.file_helper import (
     is_spring_boot_project,
     detect_project_name,
     analyze_pom,
+    detect_existing_folders,
+    detect_base_package,
+    java_source_root,
 )
 
 
@@ -73,8 +78,18 @@ def start_command():
     else:
         print_info("Validation non détectée — annotations @Valid ignorées")
 
+    # ── Détection des dossiers ───────────────────────────────────────────────
+    base_package = detect_base_package(base_path)
+    if base_package:
+        package_dir = java_source_root(base_path, base_package)
+        folder_mapping = detect_existing_folders(package_dir)
+    else:
+        folder_mapping = FolderMapping()
+        
+    print_folder_mapping_report(folder_mapping)
+
     # ── Wizard interactif ────────────────────────────────────────────────────
-    config = run_wizard(pom_features)
+    config = run_wizard(pom_features, folder_mapping)
 
     if not config.entities:
         print_error("Aucune entité définie. Abandon.")

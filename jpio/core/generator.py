@@ -82,13 +82,13 @@ def generate_all(config: ProjectConfig, base_path: Path = Path(".")) -> dict[str
 
     global_templates = [
         ("exception/global_exception_handler.java.j2",
-         f"{java_base}/exception/GlobalExceptionHandler.java")
+         f"{java_base}/{config.folder_mapping.exception}/GlobalExceptionHandler.java")
     ]
     
     if config.pom_features.has_swagger:
         global_templates.append(
             ("config/swagger_config.java.j2",
-             f"{java_base}/config/SwaggerConfig.java")
+             f"{java_base}/{config.folder_mapping.config}/SwaggerConfig.java")
         )
 
     for template_name, dest_path in global_templates:
@@ -109,7 +109,12 @@ def generate_all(config: ProjectConfig, base_path: Path = Path(".")) -> dict[str
 
 def _generate_enum_file(env: Environment, config: ProjectConfig, enum_obj, java_base: str) -> dict[str, str]:
     template = env.get_template("entity/enum.java.j2")
-    dest_path = f"{java_base}/models/enum/{enum_obj.name}.java"
+    # On déduit le dossier enum du dossier entity (ex: models/entity -> models/enum)
+    enum_folder = config.folder_mapping.entity.replace("entity", "enum").replace("entities", "enums")
+    if enum_folder == config.folder_mapping.entity:
+        enum_folder = "enum"
+        
+    dest_path = f"{java_base}/{enum_folder}/{enum_obj.name}.java"
     ctx = {
         "base_package": config.base_package,
         "enum": enum_obj
@@ -122,15 +127,15 @@ def _generate_entity_files(env: Environment, config: ProjectConfig, entity: Enti
     ctx = _entity_context(entity, config)
 
     templates_entity = [
-        ("entity/entity.java.j2",               f"{java_base}/models/entity/{entity.name}.java"),
-        ("entity/request_dto.java.j2",          f"{java_base}/dto/request/{entity.name}RequestDTO.java"),
-        ("entity/response_dto.java.j2",         f"{java_base}/dto/response/{entity.name}ResponseDTO.java"),
-        ("entity/mapper.java.j2",                f"{java_base}/mapper/{entity.name}Mapper.java"),
-        ("entity/repository.java.j2",            f"{java_base}/repository/{entity.name}Repository.java"),
-        ("entity/service.java.j2",               f"{java_base}/service/{entity.name}Service.java"),
-        ("entity/service_impl.java.j2",          f"{java_base}/service/{entity.name}ServiceImpl.java"),
-        ("entity/controller.java.j2",            f"{java_base}/controller/{entity.name}Controller.java"),
-        ("entity/not_found_exception.java.j2",   f"{java_base}/exception/{entity.name}NotFoundException.java"),
+        ("entity/entity.java.j2",               f"{java_base}/{config.folder_mapping.entity}/{entity.name}.java"),
+        ("entity/request_dto.java.j2",          f"{java_base}/{config.folder_mapping.dto}/request/{entity.name}RequestDTO.java"),
+        ("entity/response_dto.java.j2",         f"{java_base}/{config.folder_mapping.dto}/response/{entity.name}ResponseDTO.java"),
+        ("entity/mapper.java.j2",                f"{java_base}/{config.folder_mapping.mapper}/{entity.name}Mapper.java"),
+        ("entity/repository.java.j2",            f"{java_base}/{config.folder_mapping.repository}/{entity.name}Repository.java"),
+        ("entity/service.java.j2",               f"{java_base}/{config.folder_mapping.service}/{entity.name}Service.java"),
+        ("entity/service_impl.java.j2",          f"{java_base}/{config.folder_mapping.service}/{entity.name}ServiceImpl.java"),
+        ("entity/controller.java.j2",            f"{java_base}/{config.folder_mapping.controller}/{entity.name}Controller.java"),
+        ("entity/not_found_exception.java.j2",   f"{java_base}/{config.folder_mapping.exception}/{entity.name}NotFoundException.java"),
     ]
 
     for template_name, dest_path in templates_entity:
