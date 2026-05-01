@@ -196,11 +196,17 @@ class Entity:
     relations: list[Relation]
 
 @dataclass
+class Enum:
+    name: str          # e.g. "Role"
+    values: list[str]  # e.g. ["USER", "ADMIN"]
+
+@dataclass
 class ProjectConfig:
     project_name: str
     base_package: str
     database: str
     entities: list[Entity]
+    enums: list[Enum]
 ```
 
 ---
@@ -223,11 +229,12 @@ ecommerce-api/
         │       │   ├── ProductController.java
         │       │   └── CategoryController.java
         │       ├── dto/
-        │       │   ├── ProductDTO.java
-        │       │   └── CategoryDTO.java
-        │       ├── entity/
-        │       │   ├── Product.java
-        │       │   └── Category.java
+        │       │   ├── request/
+        │       │   │   ├── ProductRequestDTO.java
+        │       │   │   └── CategoryRequestDTO.java
+        │       │   └── response/
+        │       │       ├── ProductResponseDTO.java
+        │       │       └── CategoryResponseDTO.java
         │       ├── exception/
         │       │   ├── GlobalExceptionHandler.java
         │       │   ├── ProductNotFoundException.java
@@ -235,6 +242,12 @@ ecommerce-api/
         │       ├── mapper/
         │       │   ├── ProductMapper.java
         │       │   └── CategoryMapper.java
+        │       ├── models/
+        │       │   ├── entity/
+        │       │   │   ├── Product.java
+        │       │   │   └── Category.java
+        │       │   └── enum/
+        │       │       └── Role.java
         │       ├── repository/
         │       │   ├── ProductRepository.java
         │       │   └── CategoryRepository.java
@@ -268,8 +281,10 @@ Relations are declared interactively. JPIO automatically handles:
 
 - [x] MVP: interactive wizard + full CRUD scaffold generation
 - [x] OneToMany / ManyToMany relation support
-- [ ] `jpio add` command for existing projects
-- [ ] `jpio scan` project inspector
+- [x] `jpio add` command for existing projects
+- [x] `jpio scan` project inspector
+- [x] Enums support & Request/Response DTO separation (v0.1.1)
+- [ ] `jpio add enum` command for existing projects
 - [ ] IntelliJ IDEA plugin
 - [ ] VS Code extension
 - [ ] Spring Security scaffolding (optional layer)
