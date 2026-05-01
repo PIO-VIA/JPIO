@@ -21,8 +21,8 @@ from jpio.core.writer import write_all, APPEND_PREFIX
 def generated_simple() -> dict[str, str]:
     """Simule un dict de sortie minimal de generator.py."""
     return {
-        "src/main/java/com/pio/test/entity/Product.java":     "// Product.java content",
-        "src/main/java/com/pio/test/dto/ProductDTO.java":     "// ProductDTO.java content",
+        "src/main/java/com/pio/test/models/entity/Product.java":     "// Product.java content",
+        "src/main/java/com/pio/test/dto/response/ProductResponseDTO.java":     "// ProductDTO.java content",
         "src/main/java/com/pio/test/service/ProductService.java": "// ProductService content",
     }
 
@@ -53,21 +53,21 @@ class TestWriteNormalFiles:
     def test_creates_files_on_disk(self, tmp_path, generated_simple):
         write_all(generated_simple, base_path=tmp_path)
 
-        assert (tmp_path / "src/main/java/com/pio/test/entity/Product.java").exists()
-        assert (tmp_path / "src/main/java/com/pio/test/dto/ProductDTO.java").exists()
+        assert (tmp_path / "src/main/java/com/pio/test/models/entity/Product.java").exists()
+        assert (tmp_path / "src/main/java/com/pio/test/dto/response/ProductResponseDTO.java").exists()
         assert (tmp_path / "src/main/java/com/pio/test/service/ProductService.java").exists()
 
     def test_file_content_is_correct(self, tmp_path, generated_simple):
         write_all(generated_simple, base_path=tmp_path)
 
-        content = (tmp_path / "src/main/java/com/pio/test/entity/Product.java").read_text()
+        content = (tmp_path / "src/main/java/com/pio/test/models/entity/Product.java").read_text()
         assert content == "// Product.java content"
 
     def test_creates_parent_directories(self, tmp_path, generated_simple):
         write_all(generated_simple, base_path=tmp_path)
 
-        assert (tmp_path / "src" / "main" / "java" / "com" / "pio" / "test" / "entity").is_dir()
-        assert (tmp_path / "src" / "main" / "java" / "com" / "pio" / "test" / "dto").is_dir()
+        assert (tmp_path / "src" / "main" / "java" / "com" / "pio" / "test" / "models" / "entity").is_dir()
+        assert (tmp_path / "src" / "main" / "java" / "com" / "pio" / "test" / "dto" / "response").is_dir()
 
     def test_returns_correct_file_count(self, tmp_path, generated_simple):
         count = write_all(generated_simple, base_path=tmp_path)
@@ -75,11 +75,10 @@ class TestWriteNormalFiles:
 
     def test_does_not_overwrite_existing_file(self, tmp_path):
         """Un fichier déjà présent ne doit pas être écrasé (overwrite=False par défaut)."""
-        target = tmp_path / "src/main/java/com/pio/test/entity/Product.java"
+        target = tmp_path / "src/main/java/com/pio/test/models/entity/Product.java"
         target.parent.mkdir(parents=True)
         target.write_text("// ORIGINAL")
-
-        generated = {"src/main/java/com/pio/test/entity/Product.java": "// NEW CONTENT"}
+        generated = {"src/main/java/com/pio/test/models/entity/Product.java": "// NEW CONTENT"}
         count = write_all(generated, base_path=tmp_path)
 
         assert target.read_text() == "// ORIGINAL"
@@ -87,18 +86,17 @@ class TestWriteNormalFiles:
 
     def test_skips_existing_and_writes_new(self, tmp_path):
         """Écrit les nouveaux fichiers et ignore les existants."""
-        existing = tmp_path / "src/main/java/com/pio/test/entity/Product.java"
+        existing = tmp_path / "src/main/java/com/pio/test/models/entity/Product.java"
         existing.parent.mkdir(parents=True)
         existing.write_text("// ORIGINAL")
-
         generated = {
-            "src/main/java/com/pio/test/entity/Product.java": "// NEW",  # existant → ignoré
-            "src/main/java/com/pio/test/dto/ProductDTO.java": "// DTO",  # nouveau → écrit
+            "src/main/java/com/pio/test/models/entity/Product.java": "// NEW",  # existant → ignoré
+            "src/main/java/com/pio/test/dto/response/ProductResponseDTO.java": "// DTO",  # nouveau → écrit
         }
         count = write_all(generated, base_path=tmp_path)
 
         assert existing.read_text() == "// ORIGINAL"
-        assert (tmp_path / "src/main/java/com/pio/test/dto/ProductDTO.java").read_text() == "// DTO"
+        assert (tmp_path / "src/main/java/com/pio/test/dto/response/ProductResponseDTO.java").read_text() == "// DTO"
         assert count == 1
 
 

@@ -96,8 +96,9 @@ class TestGeneratedKeys:
         base = "src/main/java/com/pio/ecommerce"
 
         expected_files = [
-            f"{base}/entity/Product.java",
-            f"{base}/dto/ProductDTO.java",
+            f"{base}/models/entity/Product.java",
+            f"{base}/dto/request/ProductRequestDTO.java",
+            f"{base}/dto/response/ProductResponseDTO.java",
             f"{base}/mapper/ProductMapper.java",
             f"{base}/repository/ProductRepository.java",
             f"{base}/service/ProductService.java",
@@ -120,8 +121,8 @@ class TestGeneratedKeys:
     def test_generates_files_for_each_entity(self, config_with_many_to_many):
         output = generate_all(config_with_many_to_many)
         base = "src/main/java/com/pio/shop"
-        assert f"{base}/entity/Product.java" in output
-        assert f"{base}/entity/Category.java" in output
+        assert f"{base}/models/entity/Product.java" in output
+        assert f"{base}/models/entity/Category.java" in output
         assert f"{base}/controller/ProductController.java" in output
         assert f"{base}/controller/CategoryController.java" in output
 
@@ -134,12 +135,12 @@ class TestEntityContent:
 
     def test_entity_has_correct_package(self, simple_config):
         output = generate_all(simple_config)
-        entity_java = output["src/main/java/com/pio/ecommerce/entity/Product.java"]
-        assert "package com.pio.ecommerce.entity;" in entity_java
+        entity_java = output["src/main/java/com/pio/ecommerce/models/entity/Product.java"]
+        assert "package com.pio.ecommerce.models.entity;" in entity_java
 
     def test_entity_has_lombok_annotations(self, simple_config):
         output = generate_all(simple_config)
-        entity_java = output["src/main/java/com/pio/ecommerce/entity/Product.java"]
+        entity_java = output["src/main/java/com/pio/ecommerce/models/entity/Product.java"]
         assert "@Data"               in entity_java
         assert "@NoArgsConstructor"  in entity_java
         assert "@AllArgsConstructor" in entity_java
@@ -147,7 +148,7 @@ class TestEntityContent:
 
     def test_entity_has_jpa_annotations(self, simple_config):
         output = generate_all(simple_config)
-        entity_java = output["src/main/java/com/pio/ecommerce/entity/Product.java"]
+        entity_java = output["src/main/java/com/pio/ecommerce/models/entity/Product.java"]
         assert "@Entity"   in entity_java
         assert "@Table"    in entity_java
         assert "@Id"       in entity_java
@@ -155,14 +156,14 @@ class TestEntityContent:
 
     def test_entity_has_all_fields(self, simple_config):
         output = generate_all(simple_config)
-        entity_java = output["src/main/java/com/pio/ecommerce/entity/Product.java"]
+        entity_java = output["src/main/java/com/pio/ecommerce/models/entity/Product.java"]
         assert "private String name;"   in entity_java
         assert "private Double price;"  in entity_java
         assert "private Integer stock;" in entity_java
 
     def test_non_nullable_field_has_column_annotation(self, simple_config):
         output = generate_all(simple_config)
-        entity_java = output["src/main/java/com/pio/ecommerce/entity/Product.java"]
+        entity_java = output["src/main/java/com/pio/ecommerce/models/entity/Product.java"]
         assert "@Column(nullable = false)" in entity_java
 
     def test_entity_imports_localdate(self):
@@ -178,7 +179,7 @@ class TestEntityContent:
             ],
         )
         output = generate_all(config)
-        entity_java = output["src/main/java/com/pio/test/entity/Event.java"]
+        entity_java = output["src/main/java/com/pio/test/models/entity/Event.java"]
         assert "import java.time.LocalDate;" in entity_java
 
 
@@ -190,7 +191,7 @@ class TestRelationsContent:
 
     def test_many_to_many_owner_has_join_table(self, config_with_many_to_many):
         output = generate_all(config_with_many_to_many)
-        product_java = output["src/main/java/com/pio/shop/entity/Product.java"]
+        product_java = output["src/main/java/com/pio/shop/models/entity/Product.java"]
         assert "@ManyToMany"  in product_java
         assert "@JoinTable"   in product_java
         assert "joinColumns"  in product_java
@@ -198,20 +199,20 @@ class TestRelationsContent:
 
     def test_many_to_many_inverse_has_mapped_by(self, config_with_many_to_many):
         output = generate_all(config_with_many_to_many)
-        category_java = output["src/main/java/com/pio/shop/entity/Category.java"]
+        category_java = output["src/main/java/com/pio/shop/models/entity/Category.java"]
         assert "@ManyToMany(mappedBy" in category_java
         assert "@JoinTable" not in category_java
 
     def test_one_to_many_has_cascade(self, config_with_one_to_many):
         output = generate_all(config_with_one_to_many)
-        order_java = output["src/main/java/com/pio/orders/entity/Order.java"]
+        order_java = output["src/main/java/com/pio/orders/models/entity/Order.java"]
         assert "@OneToMany" in order_java
         assert "cascade"    in order_java
         assert "orphanRemoval" in order_java
 
     def test_many_to_one_has_join_column(self, config_with_one_to_many):
         output = generate_all(config_with_one_to_many)
-        item_java = output["src/main/java/com/pio/orders/entity/OrderItem.java"]
+        item_java = output["src/main/java/com/pio/orders/models/entity/OrderItem.java"]
         assert "@ManyToOne"   in item_java
         assert "@JoinColumn"  in item_java
 
@@ -224,18 +225,18 @@ class TestDTOContent:
 
     def test_dto_has_correct_package(self, simple_config):
         output = generate_all(simple_config)
-        dto = output["src/main/java/com/pio/ecommerce/dto/ProductDTO.java"]
-        assert "package com.pio.ecommerce.dto;" in dto
+        dto = output["src/main/java/com/pio/ecommerce/dto/response/ProductResponseDTO.java"]
+        assert "package com.pio.ecommerce.dto.response;" in dto
 
     def test_dto_has_lombok_annotations(self, simple_config):
         output = generate_all(simple_config)
-        dto = output["src/main/java/com/pio/ecommerce/dto/ProductDTO.java"]
+        dto = output["src/main/java/com/pio/ecommerce/dto/response/ProductResponseDTO.java"]
         assert "@Data"    in dto
         assert "@Builder" in dto
 
     def test_dto_uses_ids_for_relations(self, config_with_many_to_many):
         output = generate_all(config_with_many_to_many)
-        dto = output["src/main/java/com/pio/shop/dto/ProductDTO.java"]
+        dto = output["src/main/java/com/pio/shop/dto/response/ProductResponseDTO.java"]
         assert "List<Long>" in dto
         assert "Ids"        in dto
 
