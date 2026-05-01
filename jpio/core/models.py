@@ -62,6 +62,21 @@ class Field:
         """Retourne le nom du champ avec la première lettre en majuscule."""
         return self.name[0].upper() + self.name[1:]
 
+    @classmethod
+    def from_dict(cls, data: dict) -> "Field":
+        return cls(
+            name=data["name"],
+            java_type=data["java_type"],
+            nullable=data.get("nullable", True)
+        )
+
+    def to_dict(self) -> dict:
+        return {
+            "name": self.name,
+            "java_type": self.java_type,
+            "nullable": self.nullable
+        }
+
 
 @dataclass
 class Relation:
@@ -99,6 +114,23 @@ class Relation:
             base = self.target_lower
             return base + "s" if not base.endswith("s") else base
         return self.target_lower
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "Relation":
+        return cls(
+            kind=data["kind"],
+            target=data["target"],
+            mapped_by=data.get("mapped_by", ""),
+            owner=data.get("owner", True)
+        )
+
+    def to_dict(self) -> dict:
+        return {
+            "kind": self.kind,
+            "target": self.target,
+            "mapped_by": self.mapped_by,
+            "owner": self.owner
+        }
 
 
 @dataclass
@@ -139,6 +171,19 @@ class Entity:
                 imports.add(JAVA_TYPE_IMPORTS[f.java_type])
         return sorted(imports)
 
+    @classmethod
+    def from_dict(cls, data: dict) -> "Entity":
+        fields = [Field.from_dict(f) for f in data.get("fields", [])]
+        relations = [Relation.from_dict(r) for r in data.get("relations", [])]
+        return cls(name=data["name"], fields=fields, relations=relations)
+
+    def to_dict(self) -> dict:
+        return {
+            "name": self.name,
+            "fields": [f.to_dict() for f in self.fields],
+            "relations": [r.to_dict() for r in self.relations]
+        }
+
 
 @dataclass
 class ProjectConfig:
@@ -162,3 +207,19 @@ class ProjectConfig:
         ex: com.pio.ecommerce → com/pio/ecommerce
         """
         return self.base_package.replace(".", "/")
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "ProjectConfig":
+        entities = [Entity.from_dict(e) for e in data.get("entities", [])]
+        return cls(
+            base_package=data["base_package"],
+            api_prefix=data.get("api_prefix", "/api/v1"),
+            entities=entities
+        )
+
+    def to_dict(self) -> dict:
+        return {
+            "base_package": self.base_package,
+            "api_prefix": self.api_prefix,
+            "entities": [e.to_dict() for e in self.entities]
+        }

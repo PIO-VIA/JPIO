@@ -12,6 +12,7 @@ grâce à la config [project.scripts] dans pyproject.toml :
 import click
 from jpio.commands.new import start_command
 from jpio.commands.scan import scan_command
+from jpio.commands.add import add_command
 
 
 @click.group()
@@ -29,6 +30,7 @@ def cli():
 
 cli.add_command(start_command)
 cli.add_command(scan_command)
+cli.add_command(add_command)
 
 
 if __name__ == "__main__":

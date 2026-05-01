@@ -65,22 +65,7 @@ def generate_all(config: ProjectConfig) -> dict[str, str]:
 
     # ── Fichiers par entité ──────────────────────────────────────────────────
     for entity in config.entities:
-        ctx = _entity_context(entity, config)
-
-        templates_entity = [
-            ("entity/entity.java.j2",               f"{java_base}/entity/{entity.name}.java"),
-            ("entity/dto.java.j2",                   f"{java_base}/dto/{entity.name}DTO.java"),
-            ("entity/mapper.java.j2",                f"{java_base}/mapper/{entity.name}Mapper.java"),
-            ("entity/repository.java.j2",            f"{java_base}/repository/{entity.name}Repository.java"),
-            ("entity/service.java.j2",               f"{java_base}/service/{entity.name}Service.java"),
-            ("entity/service_impl.java.j2",          f"{java_base}/service/{entity.name}ServiceImpl.java"),
-            ("entity/controller.java.j2",            f"{java_base}/controller/{entity.name}Controller.java"),
-            ("entity/not_found_exception.java.j2",   f"{java_base}/exception/{entity.name}NotFoundException.java"),
-        ]
-
-        for template_name, dest_path in templates_entity:
-            template = env.get_template(template_name)
-            output[dest_path] = template.render(**ctx)
+        output.update(_generate_entity_files(env, config, entity, java_base))
 
     # ── Fichiers globaux (une seule fois par projet) ─────────────────────────
     global_ctx = _global_context(config)
@@ -102,6 +87,37 @@ def generate_all(config: ProjectConfig) -> dict[str, str]:
         template.render(**global_ctx)
 
     return output
+
+
+def _generate_entity_files(env: Environment, config: ProjectConfig, entity: Entity, java_base: str) -> dict[str, str]:
+    output = {}
+    ctx = _entity_context(entity, config)
+
+    templates_entity = [
+        ("entity/entity.java.j2",               f"{java_base}/entity/{entity.name}.java"),
+        ("entity/dto.java.j2",                   f"{java_base}/dto/{entity.name}DTO.java"),
+        ("entity/mapper.java.j2",                f"{java_base}/mapper/{entity.name}Mapper.java"),
+        ("entity/repository.java.j2",            f"{java_base}/repository/{entity.name}Repository.java"),
+        ("entity/service.java.j2",               f"{java_base}/service/{entity.name}Service.java"),
+        ("entity/service_impl.java.j2",          f"{java_base}/service/{entity.name}ServiceImpl.java"),
+        ("entity/controller.java.j2",            f"{java_base}/controller/{entity.name}Controller.java"),
+        ("entity/not_found_exception.java.j2",   f"{java_base}/exception/{entity.name}NotFoundException.java"),
+    ]
+
+    for template_name, dest_path in templates_entity:
+        template = env.get_template(template_name)
+        output[dest_path] = template.render(**ctx)
+
+    return output
+
+
+def generate_single_entity(config: ProjectConfig, entity: Entity) -> dict[str, str]:
+    """
+    Génère les fichiers Java pour une seule entité (sans les configurations globales).
+    """
+    env = _make_env()
+    java_base = f"src/main/java/{config.package_path}"
+    return _generate_entity_files(env, config, entity, java_base)
 
 
 # ---------------------------------------------------------------------------

@@ -76,30 +76,6 @@ def start_command():
 
 def _save_jpio_json(config, base_path: Path) -> None:
     """Sauvegarde le snapshot du projet dans .jpio.json."""
-    snapshot = {
-        "base_package": config.base_package,
-        "api_prefix":   config.api_prefix,
-        "entities": [
-            {
-                "name": e.name,
-                "fields": [
-                    {"name": f.name, "java_type": f.java_type, "nullable": f.nullable}
-                    for f in e.fields
-                ],
-                "relations": [
-                    {
-                        "kind":       r.kind,
-                        "target":     r.target,
-                        "mapped_by":  r.mapped_by,
-                        "owner":      r.owner,
-                    }
-                    for r in e.relations
-                ],
-            }
-            for e in config.entities
-        ],
-    }
-
     jpio_file = base_path / ".jpio.json"
-    jpio_file.write_text(json.dumps(snapshot, indent=2, ensure_ascii=False))
+    jpio_file.write_text(json.dumps(config.to_dict(), indent=2, ensure_ascii=False))
     print_success(".jpio.json sauvegardé.")

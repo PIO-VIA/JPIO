@@ -104,6 +104,17 @@ def run_wizard() -> ProjectConfig:
     )
 
 
+def run_add_wizard(existing_entity_names: list[str]) -> Entity | None:
+    """
+    Lance le questionnaire pour ajouter une seule entité.
+    """
+    print_section("Nouvelle Entité")
+    entity = _collect_entity(len(existing_entity_names) + 1, existing_entity_names)
+    if entity:
+        print_success(f"Entité [bold]{entity.name}[/bold] configurée.")
+    return entity
+
+
 # ---------------------------------------------------------------------------
 # Collecte d'une entité
 # ---------------------------------------------------------------------------
