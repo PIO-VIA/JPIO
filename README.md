@@ -283,7 +283,7 @@ Relations are declared interactively. JPIO automatically handles:
 - [x] OneToMany / ManyToMany relation support
 - [x] `jpio add` command for existing projects
 - [x] `jpio scan` project inspector
-- [x] Enums support & Request/Response DTO separation (v0.1.1)
+- [x] Enums support & Request/Response DTO separation (v0.2.0)
 - [ ] `jpio add enum` command for existing projects
 - [ ] IntelliJ IDEA plugin
 - [ ] VS Code extension
@@ -298,8 +298,8 @@ Relations are declared interactively. JPIO automatically handles:
 Contributions are welcome. Please open an issue before submitting a pull request to discuss the proposed change.
 
 ```bash
-git clone https://github.com/yourname/jpio.git
-cd jpio
+git clone https://github.com/PIO-VIA/JPIO.git
+cd JPIO
 pip install -e ".[dev]"
 ```
 
