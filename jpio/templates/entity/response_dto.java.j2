@@ -1,8 +1,13 @@
-package {{ base_package }}.dto;
+package {{ base_package }}.dto.response;
 
 import lombok.*;
 {% for import in extra_imports %}
 import {{ import }};
+{% endfor %}
+{% for field in fields %}
+    {% if field.is_enum %}
+import {{ base_package }}.models.enum.{{ field.java_type }};
+    {% endif %}
 {% endfor %}
 {% for relation in relations %}
 import java.util.List;
@@ -12,7 +17,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class {{ entity_name }}DTO {
+public class {{ entity_name }}ResponseDTO {
 
     private Long id;
 

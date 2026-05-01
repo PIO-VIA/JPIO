@@ -67,6 +67,10 @@ def generate_all(config: ProjectConfig) -> dict[str, str]:
     for entity in config.entities:
         output.update(_generate_entity_files(env, config, entity, java_base))
 
+    # ── Énumérations ─────────────────────────────────────────────────────────
+    for enum_obj in config.enums:
+        output.update(_generate_enum_file(env, config, enum_obj, java_base))
+
     # ── Fichiers globaux (une seule fois par projet) ─────────────────────────
     global_ctx = _global_context(config)
 
@@ -89,13 +93,24 @@ def generate_all(config: ProjectConfig) -> dict[str, str]:
     return output
 
 
+def _generate_enum_file(env: Environment, config: ProjectConfig, enum_obj, java_base: str) -> dict[str, str]:
+    template = env.get_template("entity/enum.java.j2")
+    dest_path = f"{java_base}/models/enum/{enum_obj.name}.java"
+    ctx = {
+        "base_package": config.base_package,
+        "enum": enum_obj
+    }
+    return {dest_path: template.render(**ctx)}
+
+
 def _generate_entity_files(env: Environment, config: ProjectConfig, entity: Entity, java_base: str) -> dict[str, str]:
     output = {}
     ctx = _entity_context(entity, config)
 
     templates_entity = [
-        ("entity/entity.java.j2",               f"{java_base}/entity/{entity.name}.java"),
-        ("entity/dto.java.j2",                   f"{java_base}/dto/{entity.name}DTO.java"),
+        ("entity/entity.java.j2",               f"{java_base}/models/entity/{entity.name}.java"),
+        ("entity/request_dto.java.j2",          f"{java_base}/dto/request/{entity.name}RequestDTO.java"),
+        ("entity/response_dto.java.j2",         f"{java_base}/dto/response/{entity.name}ResponseDTO.java"),
         ("entity/mapper.java.j2",                f"{java_base}/mapper/{entity.name}Mapper.java"),
         ("entity/repository.java.j2",            f"{java_base}/repository/{entity.name}Repository.java"),
         ("entity/service.java.j2",               f"{java_base}/service/{entity.name}Service.java"),

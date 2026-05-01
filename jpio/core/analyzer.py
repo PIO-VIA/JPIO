@@ -14,6 +14,7 @@ from jpio.core.models import (
     Entity,
     Field,
     Relation,
+    Enum,
     SUPPORTED_JAVA_TYPES,
     SUPPORTED_RELATIONS,
 )
@@ -74,13 +75,25 @@ def run_wizard() -> ProjectConfig:
         style=QSTYLE,
     ).ask()
 
+    # ── Collecte des énumérations ────────────────────────────────────────────
+    enums: list[Enum] = []
+    has_enums = questionary.confirm(
+        "Voulez-vous définir des énumérations (Enums) pour ce projet ?",
+        default=False,
+        style=QSTYLE,
+    ).ask()
+
+    if has_enums:
+        print_section("Énumérations")
+        enums = _collect_enums()
+
     # ── Collecte des entités ─────────────────────────────────────────────────
     entities: list[Entity] = []
     entity_number = 1
 
     while True:
         print_section(f"Entité {entity_number}")
-        entity = _collect_entity(entity_number, [e.name for e in entities])
+        entity = _collect_entity(entity_number, [e.name for e in entities], enums)
 
         if entity:
             entities.append(entity)
@@ -101,15 +114,16 @@ def run_wizard() -> ProjectConfig:
         base_package=base_package,
         api_prefix=api_prefix,
         entities=entities,
+        enums=enums,
     )
 
 
-def run_add_wizard(existing_entity_names: list[str]) -> Entity | None:
+def run_add_wizard(existing_entity_names: list[str], existing_enums: list[Enum] = None) -> Entity | None:
     """
     Lance le questionnaire pour ajouter une seule entité.
     """
     print_section("Nouvelle Entité")
-    entity = _collect_entity(len(existing_entity_names) + 1, existing_entity_names)
+    entity = _collect_entity(len(existing_entity_names) + 1, existing_entity_names, existing_enums)
     if entity:
         print_success(f"Entité [bold]{entity.name}[/bold] configurée.")
     return entity
@@ -119,7 +133,7 @@ def run_add_wizard(existing_entity_names: list[str]) -> Entity | None:
 # Collecte d'une entité
 # ---------------------------------------------------------------------------
 
-def _collect_entity(number: int, existing_entity_names: list[str]) -> Entity | None:
+def _collect_entity(number: int, existing_entity_names: list[str], enums: list[Enum] = None) -> Entity | None:
     """Collecte le nom, les champs et les relations d'une entité."""
 
     # ── Nom ─────────────────────────────────────────────────────────────────
@@ -141,7 +155,7 @@ def _collect_entity(number: int, existing_entity_names: list[str]) -> Entity | N
 
     # ── Champs ───────────────────────────────────────────────────────────────
     print_info("Ajoutez les champs de l'entité (laissez le nom vide pour terminer).")
-    fields = _collect_fields()
+    fields = _collect_fields(enums)
 
     # ── Relations ────────────────────────────────────────────────────────────
     relations: list[Relation] = []
@@ -161,7 +175,7 @@ def _collect_entity(number: int, existing_entity_names: list[str]) -> Entity | N
 # Collecte des champs
 # ---------------------------------------------------------------------------
 
-def _collect_fields() -> list[Field]:
+def _collect_fields(enums: list[Enum] = None) -> list[Field]:
     """Collecte les champs d'une entité en boucle."""
     fields: list[Field] = []
     field_number = 1
@@ -179,11 +193,21 @@ def _collect_fields() -> list[Field]:
         # convention camelCase : première lettre minuscule
         field_name = field_name[0].lower() + field_name[1:]
 
-        java_type = questionary.select(
+        type_choices = SUPPORTED_JAVA_TYPES.copy()
+        if enums:
+            type_choices.extend([f"Enum: {e.name}" for e in enums])
+
+        java_type_choice = questionary.select(
             f"  Champ {field_number} — Type :",
-            choices=SUPPORTED_JAVA_TYPES,
+            choices=type_choices,
             style=QSTYLE,
         ).ask()
+
+        is_enum = False
+        java_type = java_type_choice
+        if java_type_choice.startswith("Enum: "):
+            is_enum = True
+            java_type = java_type_choice.split("Enum: ")[1]
 
         nullable = questionary.confirm(
             f"  Champ {field_number} — Nullable ?",
@@ -191,10 +215,43 @@ def _collect_fields() -> list[Field]:
             style=QSTYLE,
         ).ask()
 
-        fields.append(Field(name=field_name, java_type=java_type, nullable=nullable))
+        fields.append(Field(name=field_name, java_type=java_type, nullable=nullable, is_enum=is_enum))
         field_number += 1
 
     return fields
+
+
+# ---------------------------------------------------------------------------
+# Collecte des énumérations
+# ---------------------------------------------------------------------------
+
+def _collect_enums() -> list[Enum]:
+    """Collecte des énumérations en boucle."""
+    enums: list[Enum] = []
+    enum_number = 1
+
+    while True:
+        name = questionary.text(
+            f"Enumération {enum_number} — Nom (vide pour terminer) :",
+            style=QSTYLE,
+        ).ask()
+
+        if not name or not name.strip():
+            break
+
+        name = name.strip()
+        name = name[0].upper() + name[1:]
+
+        values_str = questionary.text(
+            "  Valeurs (séparées par des virgules, ex: PENDING, ACTIVE) :",
+            style=QSTYLE,
+        ).ask()
+
+        values = [v.strip().upper() for v in values_str.split(",") if v.strip()]
+        enums.append(Enum(name=name, values=values))
+        enum_number += 1
+
+    return enums
 
 
 # ---------------------------------------------------------------------------

@@ -58,7 +58,7 @@ def add_command():
     existing_entity_names = [e.name for e in config.entities]
 
     # ── Wizard pour la nouvelle entité ───────────────────────────────────────
-    new_entity = run_add_wizard(existing_entity_names)
+    new_entity = run_add_wizard(existing_entity_names, config.enums)
 
     if not new_entity:
         print_info("Ajout annulé. Aucune entité créée.")

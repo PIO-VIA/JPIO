@@ -1,9 +1,10 @@
 package {{ base_package }}.mapper;
 
-import {{ base_package }}.dto.{{ entity_name }}DTO;
-import {{ base_package }}.entity.{{ entity_name }};
+import {{ base_package }}.dto.request.{{ entity_name }}RequestDTO;
+import {{ base_package }}.dto.response.{{ entity_name }}ResponseDTO;
+import {{ base_package }}.models.entity.{{ entity_name }};
 {% for relation in relations %}
-import {{ base_package }}.entity.{{ relation.target }};
+import {{ base_package }}.models.entity.{{ relation.target }};
 {% endfor %}
 import org.springframework.stereotype.Component;
 
@@ -13,12 +14,11 @@ import java.util.stream.Collectors;
 @Component
 public class {{ entity_name }}Mapper {
 
-    // ── Entity → DTO ────────────────────────────────────────────────────────
-
-    public {{ entity_name }}DTO toDTO({{ entity_name }} entity) {
+    // ── Entity → ResponseDTO ────────────────────────────────────────────────
+    public {{ entity_name }}ResponseDTO toResponseDTO({{ entity_name }} entity) {
         if (entity == null) return null;
 
-        return {{ entity_name }}DTO.builder()
+        return {{ entity_name }}ResponseDTO.builder()
                 .id(entity.getId())
 {% for field in fields %}
                 .{{ field.name }}(entity.get{{ field.capitalized }}())
@@ -43,13 +43,11 @@ public class {{ entity_name }}Mapper {
                 .build();
     }
 
-    // ── DTO → Entity ────────────────────────────────────────────────────────
-
-    public {{ entity_name }} toEntity({{ entity_name }}DTO dto) {
+    // ── RequestDTO → Entity ─────────────────────────────────────────────────
+    public {{ entity_name }} toEntity({{ entity_name }}RequestDTO dto) {
         if (dto == null) return null;
 
         return {{ entity_name }}.builder()
-                .id(dto.getId())
 {% for field in fields %}
                 .{{ field.name }}(dto.get{{ field.capitalized }}())
 {% endfor %}
@@ -58,12 +56,11 @@ public class {{ entity_name }}Mapper {
         // pour éviter les dépendances circulaires entre Mappers.
     }
 
-    // ── Liste Entity → Liste DTO ─────────────────────────────────────────────
-
-    public List<{{ entity_name }}DTO> toDTOList(List<{{ entity_name }}> entities) {
+    // ── Liste Entity → Liste ResponseDTO ────────────────────────────────────
+    public List<{{ entity_name }}ResponseDTO> toResponseDTOList(List<{{ entity_name }}> entities) {
         if (entities == null) return List.of();
         return entities.stream()
-                .map(this::toDTO)
+                .map(this::toResponseDTO)
                 .collect(Collectors.toList());
     }
 }

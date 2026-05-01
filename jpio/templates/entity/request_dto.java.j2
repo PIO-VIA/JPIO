@@ -1,0 +1,33 @@
+package {{ base_package }}.dto.request;
+
+import lombok.*;
+{% for import in extra_imports %}
+import {{ import }};
+{% endfor %}
+{% for field in fields %}
+    {% if field.is_enum %}
+import {{ base_package }}.models.enum.{{ field.java_type }};
+    {% endif %}
+{% endfor %}
+{% for relation in relations %}
+import java.util.List;
+{% endfor %}
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class {{ entity_name }}RequestDTO {
+
+{% for field in fields %}
+    private {{ field.java_type }} {{ field.name }};
+{% endfor %}
+{% for relation in relations %}
+    {% if relation.kind in ("OneToMany", "ManyToMany") %}
+    private List<Long> {{ relation.field_name }}Ids;
+    {% elif relation.kind == "ManyToOne" %}
+    private Long {{ relation.target_lower }}Id;
+    {% endif %}
+{% endfor %}
+
+}

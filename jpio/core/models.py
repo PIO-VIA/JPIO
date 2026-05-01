@@ -46,6 +46,20 @@ SUPPORTED_RELATIONS = [
 # ---------------------------------------------------------------------------
 
 @dataclass
+class Enum:
+    """Représente une énumération Java."""
+    name: str
+    values: list[str] = field(default_factory=list)
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "Enum":
+        return cls(name=data["name"], values=data.get("values", []))
+
+    def to_dict(self) -> dict:
+        return {"name": self.name, "values": self.values}
+
+
+@dataclass
 class Field:
     """
     Représente un champ d'une entité JPA.
@@ -56,6 +70,7 @@ class Field:
     name: str
     java_type: str
     nullable: bool = True
+    is_enum: bool = False
 
     @property
     def capitalized(self) -> str:
@@ -67,14 +82,16 @@ class Field:
         return cls(
             name=data["name"],
             java_type=data["java_type"],
-            nullable=data.get("nullable", True)
+            nullable=data.get("nullable", True),
+            is_enum=data.get("is_enum", False)
         )
 
     def to_dict(self) -> dict:
         return {
             "name": self.name,
             "java_type": self.java_type,
-            "nullable": self.nullable
+            "nullable": self.nullable,
+            "is_enum": self.is_enum
         }
 
 
@@ -199,6 +216,7 @@ class ProjectConfig:
     base_package: str
     api_prefix: str
     entities: list[Entity] = field(default_factory=list)
+    enums: list[Enum] = field(default_factory=list)
 
     @property
     def package_path(self) -> str:
@@ -211,15 +229,18 @@ class ProjectConfig:
     @classmethod
     def from_dict(cls, data: dict) -> "ProjectConfig":
         entities = [Entity.from_dict(e) for e in data.get("entities", [])]
+        enums = [Enum.from_dict(e) for e in data.get("enums", [])]
         return cls(
             base_package=data["base_package"],
             api_prefix=data.get("api_prefix", "/api/v1"),
-            entities=entities
+            entities=entities,
+            enums=enums
         )
 
     def to_dict(self) -> dict:
         return {
             "base_package": self.base_package,
             "api_prefix": self.api_prefix,
-            "entities": [e.to_dict() for e in self.entities]
+            "entities": [e.to_dict() for e in self.entities],
+            "enums": [e.to_dict() for e in self.enums]
         }

@@ -1,0 +1,7 @@
+package {{ base_package }}.models.enum;
+
+public enum {{ enum.name }} {
+{% for val in enum.values %}
+    {{ val }}{% if not loop.last %},{% else %};{% endif %}
+{% endfor %}
+}

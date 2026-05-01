@@ -1,18 +1,19 @@
 package {{ base_package }}.service;
 
-import {{ base_package }}.dto.{{ entity_name }}DTO;
+import {{ base_package }}.dto.request.{{ entity_name }}RequestDTO;
+import {{ base_package }}.dto.response.{{ entity_name }}ResponseDTO;
 
 import java.util.List;
 
 public interface {{ entity_name }}Service {
 
-    List<{{ entity_name }}DTO> findAll();
+    List<{{ entity_name }}ResponseDTO> findAll();
 
-    {{ entity_name }}DTO findById(Long id);
+    {{ entity_name }}ResponseDTO findById(Long id);
 
-    {{ entity_name }}DTO create({{ entity_name }}DTO dto);
+    {{ entity_name }}ResponseDTO create({{ entity_name }}RequestDTO dto);
 
-    {{ entity_name }}DTO update(Long id, {{ entity_name }}DTO dto);
+    {{ entity_name }}ResponseDTO update(Long id, {{ entity_name }}RequestDTO dto);
 
     void delete(Long id);
 

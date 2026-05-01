@@ -1,6 +1,11 @@
 package {{ base_package }}.repository;
 
-import {{ base_package }}.entity.{{ entity_name }};
+import {{ base_package }}.models.entity.{{ entity_name }};
+{% for field in fields %}
+    {% if field.is_enum %}
+import {{ base_package }}.models.enum.{{ field.java_type }};
+    {% endif %}
+{% endfor %}
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

@@ -1,12 +1,17 @@
-package {{ base_package }}.entity;
+package {{ base_package }}.models.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
 {% for import in extra_imports %}
 import {{ import }};
 {% endfor %}
+{% for field in fields %}
+    {% if field.is_enum %}
+import {{ base_package }}.models.enum.{{ field.java_type }};
+    {% endif %}
+{% endfor %}
 {% for relation in relations %}
-import {{ base_package }}.entity.{{ relation.target }};
+import {{ base_package }}.models.entity.{{ relation.target }};
 {% endfor %}
 import java.util.List;
 
@@ -23,6 +28,9 @@ public class {{ entity_name }} {
     private Long id;
 
 {% for field in fields %}
+    {% if field.is_enum %}
+    @Enumerated(EnumType.STRING)
+    {% endif %}
     {% if not field.nullable %}
     @Column(nullable = false)
     {% endif %}

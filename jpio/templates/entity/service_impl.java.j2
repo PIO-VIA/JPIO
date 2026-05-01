@@ -1,12 +1,13 @@
 package {{ base_package }}.service;
 
-import {{ base_package }}.dto.{{ entity_name }}DTO;
-import {{ base_package }}.entity.{{ entity_name }};
+import {{ base_package }}.dto.request.{{ entity_name }}RequestDTO;
+import {{ base_package }}.dto.response.{{ entity_name }}ResponseDTO;
+import {{ base_package }}.models.entity.{{ entity_name }};
 import {{ base_package }}.exception.{{ entity_name }}NotFoundException;
 import {{ base_package }}.mapper.{{ entity_name }}Mapper;
 import {{ base_package }}.repository.{{ entity_name }}Repository;
 {% for relation in relations %}
-import {{ base_package }}.entity.{{ relation.target }};
+import {{ base_package }}.models.entity.{{ relation.target }};
 import {{ base_package }}.repository.{{ relation.target }}Repository;
 {% endfor %}
 import lombok.RequiredArgsConstructor;
@@ -33,33 +34,33 @@ public class {{ entity_name }}ServiceImpl implements {{ entity_name }}Service {
 
     @Override
     @Transactional(readOnly = true)
-    public List<{{ entity_name }}DTO> findAll() {
-        return {{ entity_lower }}Mapper.toDTOList({{ entity_lower }}Repository.findAll());
+    public List<{{ entity_name }}ResponseDTO> findAll() {
+        return {{ entity_lower }}Mapper.toResponseDTOList({{ entity_lower }}Repository.findAll());
     }
 
     // ── findById ─────────────────────────────────────────────────────────────
 
     @Override
     @Transactional(readOnly = true)
-    public {{ entity_name }}DTO findById(Long id) {
+    public {{ entity_name }}ResponseDTO findById(Long id) {
         {{ entity_name }} entity = {{ entity_lower }}Repository.findById(id)
                 .orElseThrow(() -> new {{ entity_name }}NotFoundException(id));
-        return {{ entity_lower }}Mapper.toDTO(entity);
+        return {{ entity_lower }}Mapper.toResponseDTO(entity);
     }
 
     // ── create ───────────────────────────────────────────────────────────────
 
     @Override
-    public {{ entity_name }}DTO create({{ entity_name }}DTO dto) {
+    public {{ entity_name }}ResponseDTO create({{ entity_name }}RequestDTO dto) {
         {{ entity_name }} entity = {{ entity_lower }}Mapper.toEntity(dto);
         _resolveRelations(entity, dto);
-        return {{ entity_lower }}Mapper.toDTO({{ entity_lower }}Repository.save(entity));
+        return {{ entity_lower }}Mapper.toResponseDTO({{ entity_lower }}Repository.save(entity));
     }
 
     // ── update ───────────────────────────────────────────────────────────────
 
     @Override
-    public {{ entity_name }}DTO update(Long id, {{ entity_name }}DTO dto) {
+    public {{ entity_name }}ResponseDTO update(Long id, {{ entity_name }}RequestDTO dto) {
         {{ entity_name }} existing = {{ entity_lower }}Repository.findById(id)
                 .orElseThrow(() -> new {{ entity_name }}NotFoundException(id));
 
@@ -67,7 +68,7 @@ public class {{ entity_name }}ServiceImpl implements {{ entity_name }}Service {
         existing.set{{ field.capitalized }}(dto.get{{ field.capitalized }}());
 {% endfor %}
         _resolveRelations(existing, dto);
-        return {{ entity_lower }}Mapper.toDTO({{ entity_lower }}Repository.save(existing));
+        return {{ entity_lower }}Mapper.toResponseDTO({{ entity_lower }}Repository.save(existing));
     }
 
     // ── delete ───────────────────────────────────────────────────────────────
@@ -82,7 +83,7 @@ public class {{ entity_name }}ServiceImpl implements {{ entity_name }}Service {
 
     // ── résolution des relations ─────────────────────────────────────────────
 
-    private void _resolveRelations({{ entity_name }} entity, {{ entity_name }}DTO dto) {
+    private void _resolveRelations({{ entity_name }} entity, {{ entity_name }}RequestDTO dto) {
 {% for relation in relations %}
     {% if relation.kind in ("OneToMany", "ManyToMany") %}
         if (dto.get{{ relation.field_name | capitalize }}Ids() != null) {

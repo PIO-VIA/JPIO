@@ -1,6 +1,7 @@
 package {{ base_package }}.controller;
 
-import {{ base_package }}.dto.{{ entity_name }}DTO;
+import {{ base_package }}.dto.request.{{ entity_name }}RequestDTO;
+import {{ base_package }}.dto.response.{{ entity_name }}ResponseDTO;
 import {{ base_package }}.service.{{ entity_name }}Service;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -19,21 +20,21 @@ public class {{ entity_name }}Controller {
     // ── GET /{{ api_prefix }}/{{ entity_name | lower }}s ─────────────────────────────────────────
 
     @GetMapping
-    public ResponseEntity<List<{{ entity_name }}DTO>> findAll() {
+    public ResponseEntity<List<{{ entity_name }}ResponseDTO>> findAll() {
         return ResponseEntity.ok({{ entity_lower }}Service.findAll());
     }
 
     // ── GET /{{ api_prefix }}/{{ entity_name | lower }}s/{id} ──────────────────────────────────
 
     @GetMapping("/{id}")
-    public ResponseEntity<{{ entity_name }}DTO> findById(@PathVariable Long id) {
+    public ResponseEntity<{{ entity_name }}ResponseDTO> findById(@PathVariable Long id) {
         return ResponseEntity.ok({{ entity_lower }}Service.findById(id));
     }
 
     // ── POST /{{ api_prefix }}/{{ entity_name | lower }}s ────────────────────────────────────────
 
     @PostMapping
-    public ResponseEntity<{{ entity_name }}DTO> create(@RequestBody {{ entity_name }}DTO dto) {
+    public ResponseEntity<{{ entity_name }}ResponseDTO> create(@RequestBody {{ entity_name }}RequestDTO dto) {
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body({{ entity_lower }}Service.create(dto));
@@ -42,9 +43,9 @@ public class {{ entity_name }}Controller {
     // ── PUT /{{ api_prefix }}/{{ entity_name | lower }}s/{id} ──────────────────────────────────
 
     @PutMapping("/{id}")
-    public ResponseEntity<{{ entity_name }}DTO> update(
+    public ResponseEntity<{{ entity_name }}ResponseDTO> update(
             @PathVariable Long id,
-            @RequestBody {{ entity_name }}DTO dto
+            @RequestBody {{ entity_name }}RequestDTO dto
     ) {
         return ResponseEntity.ok({{ entity_lower }}Service.update(id, dto));
     }
