@@ -1,8 +1,6 @@
 """
-utils/console.py
-----------------
-Tout ce qui est affiché dans le terminal passe par ici.
-On centralise Rich pour garder un style cohérent partout dans JPIO.
+Everything displayed in the terminal goes through here.
+Rich is centralized to maintain a consistent style throughout JPIO.
 """
 
 from rich.console import Console
@@ -15,11 +13,11 @@ console = Console()
 
 
 # ---------------------------------------------------------------------------
-# Bannière de démarrage
+# Startup Banner
 # ---------------------------------------------------------------------------
 
 def print_banner() -> None:
-    """Affiche la bannière JPIO au lancement avec de l'ASCII art."""
+    """Displays the JPIO banner at launch with ASCII art."""
     ascii_art = """
       _ ____ ___ ___  
      | |  _ \\_ _/ _ \\ 
@@ -31,7 +29,7 @@ def print_banner() -> None:
     banner = Text(ascii_art, justify="center", style="bold cyan")
     banner.append("\n — Java Project Input/Output\n", style="bold white")
     banner.append(" Spring Boot Scaffolding CLI", style="dim white")
-    banner.append("  •  v0.2.0", style="dim cyan")
+    banner.append("  •  v0.4.0", style="dim cyan")
 
     console.print(
         Panel(banner, border_style="cyan", padding=(1, 2), box=box.DOUBLE)
@@ -40,7 +38,7 @@ def print_banner() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Messages de statut
+# Status Messages
 # ---------------------------------------------------------------------------
 
 def print_success(message: str) -> None:
@@ -60,18 +58,18 @@ def print_warning(message: str) -> None:
 
 
 def print_section(title: str) -> None:
-    """Affiche un séparateur de section."""
+    """Displays a section separator."""
     console.print()
     console.rule(f"[bold cyan]{title}[/bold cyan]", style="cyan")
     console.print()
 
 
 # ---------------------------------------------------------------------------
-# Rapport de génération final
+# Final Generation Report
 # ---------------------------------------------------------------------------
 
 def print_file_created(filepath: str) -> None:
-    """Affiche un fichier créé pendant la génération."""
+    """Displays a file created during generation."""
     filename = filepath.split("/")[-1]
     console.print(f"  [green]✔[/green]  [dim]{filepath.rsplit('/', 1)[0]}/[/dim][white]{filename}[/white]")
 
@@ -81,17 +79,17 @@ def print_summary(
     entity_count: int,
     file_count: int,
 ) -> None:
-    """Affiche le panneau de résumé final après génération."""
+    """Displays the final summary panel after generation."""
     console.print()
 
     summary = Text()
-    summary.append(f"  ✅  Génération terminée !\n\n", style="bold green")
-    summary.append(f"  Projet   : ", style="dim white")
+    summary.append(f"  ✅  Generation completed!\n\n", style="bold green")
+    summary.append(f"  Project   : ", style="dim white")
     summary.append(f"{project_name}\n", style="bold white")
-    summary.append(f"  Entités  : ", style="dim white")
+    summary.append(f"  Entities  : ", style="dim white")
     summary.append(f"{entity_count}\n", style="bold cyan")
-    summary.append(f"  Fichiers : ", style="dim white")
-    summary.append(f"{file_count} créés", style="bold cyan")
+    summary.append(f"  Files     : ", style="dim white")
+    summary.append(f"{file_count} created", style="bold cyan")
 
     console.print(
         Panel(summary, border_style="green", padding=(1, 4), box=box.DOUBLE)
@@ -100,26 +98,26 @@ def print_summary(
 
 
 # ---------------------------------------------------------------------------
-# Rapport de détection des dossiers
+# Folder Detection Report
 # ---------------------------------------------------------------------------
 
 def print_folder_mapping_report(mapping) -> None:
     """
-    Affiche un tableau récapitulatif des dossiers détectés.
+    Displays a summary table of detected folders.
     
-    mapping : objet FolderMapping
+    mapping: FolderMapping object
     """
     table = Table(
-        title="[bold cyan]JPIO — Correspondance des dossiers[/bold cyan]",
+        title="[bold cyan]JPIO — Folder Mapping[/bold cyan]",
         box=box.ROUNDED,
         border_style="cyan",
         header_style="bold white",
     )
 
-    table.add_column("Couche logique", style="dim white")
-    table.add_column("Dossier réel",   style="bold cyan")
+    table.add_column("Logical Layer", style="dim white")
+    table.add_column("Actual Folder",  style="bold cyan")
 
-    # On trie pour avoir un affichage propre
+    # Sorted for clean display
     sorted_mapping = sorted(mapping.to_dict().items())
 
     for layer, folder in sorted_mapping:
@@ -130,25 +128,25 @@ def print_folder_mapping_report(mapping) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Table de scan (jpio scan)
+# Scan Table (jpio scan)
 # ---------------------------------------------------------------------------
 
 def print_scan_table(entities: list[dict]) -> None:
     """
-    Affiche un tableau récapitulatif des entités du projet.
+    Displays a summary table of project entities.
 
-    entities : liste de dicts avec clés 'name', 'fields', 'relations'
+    entities: list of dicts with keys 'name', 'fields', 'relations'
     """
     table = Table(
-        title="[bold cyan]JPIO — État du projet[/bold cyan]",
+        title="[bold cyan]JPIO — Project State[/bold cyan]",
         box=box.ROUNDED,
         border_style="cyan",
         header_style="bold white on #1a1a2e",
         show_lines=True,
     )
 
-    table.add_column("Entité",    style="bold cyan",  min_width=16)
-    table.add_column("Champs",    style="white",       min_width=30)
+    table.add_column("Entity",    style="bold cyan",  min_width=16)
+    table.add_column("Fields",    style="white",       min_width=30)
     table.add_column("Relations", style="yellow",      min_width=24)
 
     for entity in entities:
@@ -157,7 +155,7 @@ def print_scan_table(entities: list[dict]) -> None:
         )
         relations_str = ", ".join(
             f"{r['kind']} → {r['target']}" for r in entity["relations"]
-        ) or "[dim]aucune[/dim]"
+        ) or "[dim]none[/dim]"
 
         table.add_row(entity["name"], fields_str, relations_str)
 

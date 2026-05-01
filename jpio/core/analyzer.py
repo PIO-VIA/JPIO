@@ -1,9 +1,7 @@
 """
-core/analyzer.py
-----------------
-Gère le questionnaire interactif dans le terminal.
-Produit un objet ProjectConfig complet à partir des réponses de l'utilisateur.
-Utilise questionary pour les prompts et Rich pour l'affichage.
+Handles the interactive questionnaire in the terminal.
+Produces a complete ProjectConfig object from user responses.
+Uses questionary for prompts and Rich for display.
 """
 
 import questionary
@@ -30,14 +28,14 @@ from jpio.utils.file_helper import detect_base_package, detect_project_name
 
 
 # ---------------------------------------------------------------------------
-# Style questionary personnalisé
+# Custom questionary Style
 # ---------------------------------------------------------------------------
 
 QSTYLE = questionary.Style([
-    ("qmark",        "fg:#00d7ff bold"),   # le ? en cyan
+    ("qmark",        "fg:#00d7ff bold"),   # ? in cyan
     ("question",     "bold"),
-    ("answer",       "fg:#00ff87 bold"),   # réponse en vert
-    ("pointer",      "fg:#00d7ff bold"),   # ❯ en cyan
+    ("answer",       "fg:#00ff87 bold"),   # answer in bold green
+    ("pointer",      "fg:#00d7ff bold"),   # ❯ in cyan
     ("highlighted",  "fg:#00d7ff bold"),
     ("selected",     "fg:#00ff87"),
     ("separator",    "fg:#444444"),
@@ -46,13 +44,13 @@ QSTYLE = questionary.Style([
 
 
 # ---------------------------------------------------------------------------
-# Collecte du ProjectConfig
+# ProjectConfig Collection
 # ---------------------------------------------------------------------------
 
 def run_wizard(pom_features: PomFeatures = None, folder_mapping: FolderMapping = None) -> ProjectConfig:
     """
-    Lance le questionnaire complet et retourne un ProjectConfig.
-    Point d'entrée appelé par commands/new.py
+    Runs the complete questionnaire and returns a ProjectConfig.
+    Entry point called by commands/new.py
     """
     if pom_features is None:
         pom_features = PomFeatures()
@@ -62,53 +60,53 @@ def run_wizard(pom_features: PomFeatures = None, folder_mapping: FolderMapping =
 
     base_path = Path(".")
 
-    # ── Package de base ─────────────────────────────────────────────────────
+    # ── Base Package ─────────────────────────────────────────────────────
     detected_package = detect_base_package(base_path)
     detected_name    = detect_project_name(base_path)
 
     if detected_package:
-        print_success(f"Package détecté automatiquement : [bold cyan]{detected_package}[/bold cyan]")
+        print_success(f"Automatically detected package: [bold cyan]{detected_package}[/bold cyan]")
         base_package = detected_package
     else:
-        print_warning("Package de base non détecté automatiquement.")
+        print_warning("Could not automatically detect base package.")
         base_package = questionary.text(
-            "Package de base (ex: com.yourname.monprojet) :",
+            "Base package (e.g., com.yourname.myproject):",
             style=QSTYLE,
         ).ask()
 
-    # ── Préfixe API ─────────────────────────────────────────────────────────
+    # ── API Prefix ─────────────────────────────────────────────────────────
     api_prefix = questionary.text(
-        "Préfixe des routes API :",
+        "API route prefix:",
         default="/api/v1",
         style=QSTYLE,
     ).ask()
 
-    # ── Collecte des énumérations ────────────────────────────────────────────
+    # ── Enum Collection ────────────────────────────────────────────
     enums: list[Enum] = []
     has_enums = questionary.confirm(
-        "Voulez-vous définir des énumérations (Enums) pour ce projet ?",
+        "Would you like to define Enums for this project?",
         default=False,
         style=QSTYLE,
     ).ask()
 
     if has_enums:
-        print_section("Énumérations")
+        print_section("Enums")
         enums = _collect_enums()
 
-    # ── Collecte des entités ─────────────────────────────────────────────────
+    # ── Entity Collection ─────────────────────────────────────────────────
     entities: list[Entity] = []
     entity_number = 1
 
     while True:
-        print_section(f"Entité {entity_number}")
+        print_section(f"Entity {entity_number}")
         entity = _collect_entity(entity_number, [e.name for e in entities], enums)
 
         if entity:
             entities.append(entity)
-            print_success(f"Entité [bold]{entity.name}[/bold] ajoutée.")
+            print_success(f"Entity [bold]{entity.name}[/bold] added.")
 
         add_another = questionary.confirm(
-            "Ajouter une autre entité ?",
+            "Add another entity?",
             default=True,
             style=QSTYLE,
         ).ask()
@@ -130,28 +128,28 @@ def run_wizard(pom_features: PomFeatures = None, folder_mapping: FolderMapping =
 
 def run_add_wizard(existing_entity_names: list[str], existing_enums: list[Enum] = None) -> Entity | None:
     """
-    Lance le questionnaire pour ajouter une seule entité.
+    Runs the questionnaire to add a single entity.
     """
-    print_section("Nouvelle Entité")
+    print_section("New Entity")
     entity = _collect_entity(len(existing_entity_names) + 1, existing_entity_names, existing_enums)
     if entity:
-        print_success(f"Entité [bold]{entity.name}[/bold] configurée.")
+        print_success(f"Entity [bold]{entity.name}[/bold] configured.")
     return entity
 
 
 # ---------------------------------------------------------------------------
-# Collecte d'une entité
+# Entity Collection
 # ---------------------------------------------------------------------------
 
 def _collect_entity(number: int, existing_entity_names: list[str], enums: list[Enum] = None) -> Entity | None:
-    """Collecte le nom, les champs et les relations d'une entité."""
+    """Collects name, fields, and relations for an entity."""
 
-    # ── Nom ─────────────────────────────────────────────────────────────────
+    # ── Name ─────────────────────────────────────────────────────────────────
     name = questionary.text(
-        "Nom de l'entité (ex: Product) :",
+        "Entity name (e.g., Product):",
         validate=lambda v: (
-            "Le nom ne peut pas être vide." if not v.strip()
-            else "Ce nom existe déjà." if v.strip() in existing_entity_names
+            "Name cannot be empty." if not v.strip()
+            else "This name already exists." if v.strip() in existing_entity_names
             else True
         ),
         style=QSTYLE,
@@ -163,14 +161,14 @@ def _collect_entity(number: int, existing_entity_names: list[str], enums: list[E
     name = name.strip()
     name = name[0].upper() + name[1:]
 
-    # ── Champs ───────────────────────────────────────────────────────────────
-    print_info("Ajoutez les champs de l'entité (laissez le nom vide pour terminer).")
+    # ── Fields ───────────────────────────────────────────────────────────────
+    print_info("Add entity fields (leave name empty to finish).")
     fields = _collect_fields(enums)
 
     # ── Relations ────────────────────────────────────────────────────────────
     relations: list[Relation] = []
     has_relations = questionary.confirm(
-        f"L'entité {name} a-t-elle des relations avec d'autres entités ?",
+        f"Does entity {name} have relations with other entities?",
         default=False,
         style=QSTYLE,
     ).ask()
@@ -182,17 +180,17 @@ def _collect_entity(number: int, existing_entity_names: list[str], enums: list[E
 
 
 # ---------------------------------------------------------------------------
-# Collecte des champs
+# Field Collection
 # ---------------------------------------------------------------------------
 
 def _collect_fields(enums: list[Enum] = None) -> list[Field]:
-    """Collecte les champs d'une entité en boucle."""
+    """Collects entity fields in a loop."""
     fields: list[Field] = []
     field_number = 1
 
     while True:
         field_name = questionary.text(
-            f"  Champ {field_number} — Nom (vide pour terminer) :",
+            f"  Field {field_number} — Name (empty to finish):",
             style=QSTYLE,
         ).ask()
 
@@ -200,7 +198,7 @@ def _collect_fields(enums: list[Enum] = None) -> list[Field]:
             break
 
         field_name = field_name.strip()
-        # convention camelCase : première lettre minuscule
+        # camelCase convention: first letter lowercase
         field_name = field_name[0].lower() + field_name[1:]
 
         type_choices = SUPPORTED_JAVA_TYPES.copy()
@@ -208,7 +206,7 @@ def _collect_fields(enums: list[Enum] = None) -> list[Field]:
             type_choices.extend([f"Enum: {e.name}" for e in enums])
 
         java_type_choice = questionary.select(
-            f"  Champ {field_number} — Type :",
+            f"  Field {field_number} — Type:",
             choices=type_choices,
             style=QSTYLE,
         ).ask()
@@ -220,7 +218,7 @@ def _collect_fields(enums: list[Enum] = None) -> list[Field]:
             java_type = java_type_choice.split("Enum: ")[1]
 
         nullable = questionary.confirm(
-            f"  Champ {field_number} — Nullable ?",
+            f"  Field {field_number} — Nullable?",
             default=True,
             style=QSTYLE,
         ).ask()
@@ -232,17 +230,17 @@ def _collect_fields(enums: list[Enum] = None) -> list[Field]:
 
 
 # ---------------------------------------------------------------------------
-# Collecte des énumérations
+# Enum Collection
 # ---------------------------------------------------------------------------
 
 def _collect_enums() -> list[Enum]:
-    """Collecte des énumérations en boucle."""
+    """Collects enums in a loop."""
     enums: list[Enum] = []
     enum_number = 1
 
     while True:
         name = questionary.text(
-            f"Enumération {enum_number} — Nom (vide pour terminer) :",
+            f"Enum {enum_number} — Name (empty to finish):",
             style=QSTYLE,
         ).ask()
 
@@ -253,7 +251,7 @@ def _collect_enums() -> list[Enum]:
         name = name[0].upper() + name[1:]
 
         values_str = questionary.text(
-            "  Valeurs (séparées par des virgules, ex: PENDING, ACTIVE) :",
+            "  Values (comma-separated, e.g., PENDING, ACTIVE):",
             style=QSTYLE,
         ).ask()
 
@@ -265,37 +263,37 @@ def _collect_enums() -> list[Enum]:
 
 
 # ---------------------------------------------------------------------------
-# Collecte des relations
+# Relation Collection
 # ---------------------------------------------------------------------------
 
 def _collect_relations(
     entity_name: str,
     existing_entity_names: list[str],
 ) -> list[Relation]:
-    """Collecte les relations d'une entité en boucle."""
+    """Collects entity relations in a loop."""
     relations: list[Relation] = []
     relation_number = 1
 
     while True:
-        print_info(f"Relation {relation_number} pour {entity_name}")
+        print_info(f"Relation {relation_number} for {entity_name}")
 
         kind = questionary.select(
-            "  Type de relation :",
+            "  Relation type:",
             choices=SUPPORTED_RELATIONS,
             style=QSTYLE,
         ).ask()
 
-        # Cible : entités existantes + saisie libre (nouvelle entité à venir)
-        target_choices = existing_entity_names + ["[ Autre — saisir le nom ]"]
+        # Target: existing entities + free input (new entity to come)
+        target_choices = existing_entity_names + ["[ Other — enter name ]"]
         target_choice  = questionary.select(
-            "  Entité cible :",
+            "  Target entity:",
             choices=target_choices,
             style=QSTYLE,
         ).ask()
 
-        if target_choice == "[ Autre — saisir le nom ]":
+        if target_choice == "[ Other — enter name ]":
             target = questionary.text(
-                "  Nom de l'entité cible :",
+                "  Target entity name:",
                 style=QSTYLE,
             ).ask()
             target = target.strip()
@@ -303,20 +301,20 @@ def _collect_relations(
         else:
             target = target_choice
 
-        # mapped_by : côté inverse
+        # mapped_by: inverse side
         mapped_by = ""
         owner     = True
 
         if kind in ("OneToMany", "ManyToMany"):
             mapped_by = questionary.text(
-                f"  Nom du champ côté {target} qui référence {entity_name} "
-                f"(mappedBy) :",
+                f"  Field name on {target} side referencing {entity_name} "
+                f"(mappedBy):",
                 default=entity_name[0].lower() + entity_name[1:] + "s",
                 style=QSTYLE,
             ).ask()
             owner = questionary.confirm(
-                f"  {entity_name} est-elle le côté propriétaire "
-                f"(possède la @JoinTable) ?",
+                f"  Is {entity_name} the owning side "
+                f"(has the @JoinTable)?",
                 default=True,
                 style=QSTYLE,
             ).ask()
@@ -329,7 +327,7 @@ def _collect_relations(
         ))
 
         add_another = questionary.confirm(
-            f"Ajouter une autre relation pour {entity_name} ?",
+            f"Add another relation for {entity_name}?",
             default=False,
             style=QSTYLE,
         ).ask()

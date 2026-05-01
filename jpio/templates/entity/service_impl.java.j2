@@ -101,7 +101,7 @@ public class {{ entity_name }}ServiceImpl implements {{ entity_name }}Service {
         {{ entity_lower }}Repository.deleteById(id);
     }
 
-    // ── résolution des relations ─────────────────────────────────────────────
+    // ── relation resolution ─────────────────────────────────────────────
 
     private void _resolveRelations({{ entity_name }} entity, {{ entity_name }}RequestDTO dto) {
 {% for relation in relations %}
@@ -112,7 +112,7 @@ public class {{ entity_name }}ServiceImpl implements {{ entity_name }}Service {
                             .map(relId -> {{ relation.target_lower }}Repository
                                     .findById(relId)
                                     .orElseThrow(() -> new RuntimeException(
-                                            "{{ relation.target }} introuvable : id=" + relId)))
+                                            "{{ relation.target }} not found: id=" + relId)))
                             .collect(Collectors.toList());
             entity.set{{ relation.field_name | capitalize }}({{ relation.field_name }});
         }
@@ -122,13 +122,13 @@ public class {{ entity_name }}ServiceImpl implements {{ entity_name }}Service {
                     {{ relation.target_lower }}Repository
                             .findById(dto.get{{ relation.target }}Id())
                             .orElseThrow(() -> new RuntimeException(
-                                    "{{ relation.target }} introuvable : id=" + dto.get{{ relation.target }}Id()));
+                                    "{{ relation.target }} not found: id=" + dto.get{{ relation.target }}Id()));
             entity.set{{ relation.target }}({{ relation.target_lower }});
         }
     {% endif %}
 {% endfor %}
 {% if not relations %}
-        // Aucune relation à résoudre pour cette entité.
+        // No relations to resolve for this entity.
 {% endif %}
     }
 }

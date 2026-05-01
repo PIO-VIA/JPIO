@@ -1,10 +1,6 @@
 """
-tests/test_analyzer.py
------------------------
-Tests unitaires pour les fonctions utilitaires de détection
-utilisées par l'analyzer (file_helper.py).
-On ne teste pas le wizard interactif (questionary) car il nécessite
-un vrai terminal — on teste uniquement les fonctions pures.
+Unit tests for the detection utility functions used by the analyzer (file_helper.py).
+Interactive wizard (questionary) is not tested as it requires a real terminal — only pure functions are tested.
 """
 
 import pytest
@@ -20,14 +16,14 @@ from jpio.utils.file_helper import (
 
 
 # ---------------------------------------------------------------------------
-# Fixtures — création de faux projets Spring Boot temporaires
+# Fixtures — creation of fake temporary Spring Boot projects
 # ---------------------------------------------------------------------------
 
 @pytest.fixture
 def fake_spring_project(tmp_path: Path) -> Path:
     """
-    Crée un faux projet Spring Boot minimal dans un dossier temporaire.
-    Structure :
+    Creates a minimal fake Spring Boot project in a temporary folder.
+    Structure:
         tmp_path/
         ├── pom.xml
         └── src/main/java/com/pio/ecommerce/
@@ -48,7 +44,7 @@ def fake_spring_project(tmp_path: Path) -> Path:
     java_dir.mkdir(parents=True)
     app_file = java_dir / "EcommerceApplication.java"
     app_file.write_text("""package com.pio.ecommerce;
-
+    
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
@@ -64,13 +60,13 @@ public class EcommerceApplication {
 
 @pytest.fixture
 def empty_project(tmp_path: Path) -> Path:
-    """Dossier vide — ne ressemble pas à un projet Spring Boot."""
+    """Empty folder — does not look like a Spring Boot project."""
     return tmp_path
 
 
 @pytest.fixture
 def project_without_app_file(tmp_path: Path) -> Path:
-    """Projet avec pom.xml et src/ mais sans fichier *Application.java."""
+    """Project with pom.xml and src/ but without *Application.java file."""
     pom = tmp_path / "pom.xml"
     pom.write_text("<project><artifactId>no-app</artifactId></project>")
     java_dir = tmp_path / "src" / "main" / "java" / "com" / "pio"
@@ -79,7 +75,7 @@ def project_without_app_file(tmp_path: Path) -> Path:
 
 
 # ---------------------------------------------------------------------------
-# Tests : is_spring_boot_project
+# Tests: is_spring_boot_project
 # ---------------------------------------------------------------------------
 
 class TestIsSpringBootProject:
@@ -91,18 +87,18 @@ class TestIsSpringBootProject:
         assert is_spring_boot_project(empty_project) is False
 
     def test_missing_pom_returns_false(self, tmp_path):
-        # src/ existe mais pas pom.xml
+        # src/ exists but not pom.xml
         (tmp_path / "src" / "main" / "java").mkdir(parents=True)
         assert is_spring_boot_project(tmp_path) is False
 
     def test_missing_src_returns_false(self, tmp_path):
-        # pom.xml existe mais pas src/
+        # pom.xml exists but not src/
         (tmp_path / "pom.xml").write_text("<project/>")
         assert is_spring_boot_project(tmp_path) is False
 
 
 # ---------------------------------------------------------------------------
-# Tests : detect_base_package
+# Tests: detect_base_package
 # ---------------------------------------------------------------------------
 
 class TestDetectBasePackage:
@@ -121,7 +117,7 @@ class TestDetectBasePackage:
         assert package is None
 
     def test_detects_deep_package(self, tmp_path):
-        """Vérifie que la détection fonctionne avec un package profond."""
+        """Verifies that detection works with a deep package."""
         java_dir = tmp_path / "src" / "main" / "java" / "com" / "company" / "team" / "project"
         java_dir.mkdir(parents=True)
         app = java_dir / "ProjectApplication.java"
@@ -130,7 +126,7 @@ class TestDetectBasePackage:
 
 
 # ---------------------------------------------------------------------------
-# Tests : detect_project_name
+# Tests: detect_project_name
 # ---------------------------------------------------------------------------
 
 class TestDetectProjectName:
@@ -140,12 +136,12 @@ class TestDetectProjectName:
         assert name == "ecommerce-api"
 
     def test_falls_back_to_folder_name_if_no_pom(self, tmp_path):
-        # Pas de pom.xml → retourne le nom du dossier
+        # No pom.xml → returns the folder name
         name = detect_project_name(tmp_path)
         assert name == tmp_path.name
 
     def test_falls_back_if_no_artifact_id(self, tmp_path):
-        """pom.xml sans <artifactId> → retourne le nom du dossier."""
+        """pom.xml without <artifactId> → returns the folder name."""
         pom = tmp_path / "pom.xml"
         pom.write_text("<project><groupId>com.pio</groupId></project>")
         name = detect_project_name(tmp_path)

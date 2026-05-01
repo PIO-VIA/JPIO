@@ -1,9 +1,8 @@
 """
-commands/new.py
----------------
-Commande : jpio start
-Orchestre le flow complet :
-    détection projet → wizard → génération → écriture → rapport final
+
+Command: jpio start
+Orchestrates the full flow:
+    project detection → wizard → generation → writing → final report
 """
 
 import json
@@ -36,49 +35,49 @@ from jpio.utils.file_helper import (
 @click.command("start")
 def start_command():
     """
-    Lance le wizard JPIO pour scaffolder les couches métier
-    d'un projet Spring Boot existant.
+    Launch the JPIO wizard to scaffold business layers
+    for an existing Spring Boot project.
     """
     print_banner()
 
     base_path = Path(".")
 
-    # ── Vérification projet Spring Boot ─────────────────────────────────────
+    # ── Spring Boot Project Verification ─────────────────────────────────────
     if not is_spring_boot_project(base_path):
         print_error(
-            "Aucun projet Spring Boot détecté dans ce dossier.\n"
-            "   Initialisez d'abord votre projet sur [link]https://start.spring.io[/link]\n"
-            "   puis relancez [bold]jpio start[/bold] depuis la racine du projet."
+            "No Spring Boot project detected in this folder.\n"
+            "   Initialize your project first at [link]https://start.spring.io[/link]\n"
+            "   then run [bold]jpio start[/bold] from the project root."
         )
         raise SystemExit(1)
 
     project_name = detect_project_name(base_path)
-    print_success(f"Projet Spring Boot détecté : [bold cyan]{project_name}[/bold cyan]")
+    print_success(f"Spring Boot project detected: [bold cyan]{project_name}[/bold cyan]")
 
-    # ── Analyse du pom.xml ───────────────────────────────────────────────────
+    # ── pom.xml Analysis ───────────────────────────────────────────────────
     pom_features = analyze_pom(base_path)
     
     if pom_features.has_jpa:
-        print_info("JPA détecté ✔")
+        print_info("JPA detected ✔")
     else:
-        print_info("JPA non détecté — repository généré sans JpaRepository")
+        print_info("JPA not detected — repository generated without JpaRepository")
         
     if pom_features.has_lombok:
-        print_info("Lombok détecté ✔")
+        print_info("Lombok detected ✔")
     else:
-        print_info("Lombok non détecté — getters/setters générés manuellement")
+        print_info("Lombok not detected — getters/setters generated manually")
         
     if pom_features.has_swagger:
-        print_info("Swagger détecté ✔")
+        print_info("Swagger detected ✔")
     else:
-        print_info("Swagger non détecté — SwaggerConfig ignoré")
+        print_info("Swagger not detected — SwaggerConfig ignored")
         
     if pom_features.has_validation:
-        print_info("Validation détectée ✔")
+        print_info("Validation detected ✔")
     else:
-        print_info("Validation non détectée — annotations @Valid ignorées")
+        print_info("Validation not detected — @Valid annotations ignored")
 
-    # ── Détection des dossiers ───────────────────────────────────────────────
+    # ── Folder Detection ───────────────────────────────────────────────
     base_package = detect_base_package(base_path)
     if base_package:
         package_dir = java_source_root(base_path, base_package)
@@ -88,24 +87,24 @@ def start_command():
         
     print_folder_mapping_report(folder_mapping)
 
-    # ── Wizard interactif ────────────────────────────────────────────────────
+    # ── Interactive Wizard ────────────────────────────────────────────────────
     config = run_wizard(pom_features, folder_mapping)
 
     if not config.entities:
-        print_error("Aucune entité définie. Abandon.")
+        print_error("No entities defined. Aborting.")
         raise SystemExit(1)
 
-    # ── Génération ───────────────────────────────────────────────────────────
-    print_info("Génération des fichiers en cours…")
+    # ── Generation ───────────────────────────────────────────────────────────
+    print_info("Generating files...")
     generated = generate_all(config, base_path)
 
-    # ── Écriture sur le disque ───────────────────────────────────────────────
+    # ── Disk Writing ───────────────────────────────────────────────
     file_count = write_all(generated, base_path)
 
-    # ── Sauvegarde .jpio.json ────────────────────────────────────────────────
+    # ── Save .jpio.json ────────────────────────────────────────────────
     _save_jpio_json(config, base_path)
 
-    # ── Résumé final ─────────────────────────────────────────────────────────
+    # ── Final Summary ─────────────────────────────────────────────────────────
     print_summary(
         project_name=project_name,
         entity_count=len(config.entities),
@@ -114,7 +113,7 @@ def start_command():
 
 
 def _save_jpio_json(config, base_path: Path) -> None:
-    """Sauvegarde le snapshot du projet dans .jpio.json."""
+    """Saves a snapshot of the project in .jpio.json."""
     jpio_file = base_path / ".jpio.json"
     jpio_file.write_text(json.dumps(config.to_dict(), indent=2, ensure_ascii=False))
-    print_success(".jpio.json sauvegardé.")
+    print_success(".jpio.json saved.")

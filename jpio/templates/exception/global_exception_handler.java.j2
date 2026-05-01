@@ -13,7 +13,7 @@ import java.util.Map;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    // ── Structure de la réponse d'erreur ─────────────────────────────────────
+    // ── Error Response Structure ─────────────────────────────────────
 
     private Map<String, Object> buildError(HttpStatus status, String message, WebRequest request) {
         Map<String, Object> body = new LinkedHashMap<>();
@@ -25,7 +25,7 @@ public class GlobalExceptionHandler {
         return body;
     }
 
-    // ── 404 : entités non trouvées ───────────────────────────────────────────
+    // ── 404: Not Found Exceptions ───────────────────────────────────────────
 {% for entity in entities %}
     @ExceptionHandler({{ entity.name }}NotFoundException.class)
     public ResponseEntity<Map<String, Object>> handle{{ entity.name }}NotFound(
@@ -38,7 +38,7 @@ public class GlobalExceptionHandler {
     }
 
 {% endfor %}
-    // ── 400 : argument illégal ───────────────────────────────────────────────
+    // ── 400: Illegal Argument ───────────────────────────────────────────────
 
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<Map<String, Object>> handleIllegalArgument(
@@ -50,7 +50,7 @@ public class GlobalExceptionHandler {
                 .body(buildError(HttpStatus.BAD_REQUEST, ex.getMessage(), request));
     }
 
-    // ── 500 : erreur générique ───────────────────────────────────────────────
+    // ── 500: Generic Error ───────────────────────────────────────────────
 
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<Map<String, Object>> handleRuntime(

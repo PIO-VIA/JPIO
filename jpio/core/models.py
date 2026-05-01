@@ -1,9 +1,7 @@
 """
-core/models.py
---------------
-Dataclasses internes de JPIO.
-Ces structures sont le contrat entre analyzer, generator et writer.
-Tout passe par ces objets — rien n'est passé en dict brut entre les couches.
+Internal JPIO Dataclasses.
+These structures form the contract between analyzer, generator, and writer.
+Everything passes through these objects — no raw dicts are passed between layers.
 """
 
 from dataclasses import dataclass, field
@@ -11,7 +9,7 @@ from typing import Optional
 
 
 # ---------------------------------------------------------------------------
-# Types Java supportés pour les champs d'une entité
+# Supported Java types for entity fields
 # ---------------------------------------------------------------------------
 
 SUPPORTED_JAVA_TYPES = [
@@ -26,14 +24,14 @@ SUPPORTED_JAVA_TYPES = [
     "BigDecimal",
 ]
 
-# Types qui nécessitent un import Java supplémentaire dans l'entité
+# Types requiring an additional Java import in the entity
 JAVA_TYPE_IMPORTS = {
     "LocalDate":     "java.time.LocalDate",
     "LocalDateTime": "java.time.LocalDateTime",
     "BigDecimal":    "java.math.BigDecimal",
 }
 
-# Types de relations JPA supportés
+# Supported JPA relation types
 SUPPORTED_RELATIONS = [
     "OneToMany",
     "ManyToOne",
@@ -48,9 +46,9 @@ SUPPORTED_RELATIONS = [
 @dataclass
 class FolderMapping:
     """
-    Mappe chaque couche logique du projet à un dossier réel sur le disque.
-    Permet de s'adapter aux projets existants qui utilisent des noms
-    différents (ex: 'model' au lieu d' 'entity').
+    Maps each logical layer of the project to a real folder on disk.
+    Allows adaptation to existing projects using different names
+    (e.g., 'model' instead of 'entity').
     """
     entity:     str = "models/entity"
     dto:        str = "dto"
@@ -89,7 +87,7 @@ class FolderMapping:
 
 @dataclass
 class Enum:
-    """Représente une énumération Java."""
+    """Represents a Java enumeration."""
     name: str
     values: list[str] = field(default_factory=list)
 
@@ -104,8 +102,8 @@ class Enum:
 @dataclass
 class PomFeatures:
     """
-    Résultat de l'analyse du pom.xml.
-    Chaque attribut correspond à une dépendance Spring Boot détectée.
+    Result of pom.xml analysis.
+    Each attribute corresponds to a detected Spring Boot dependency.
     """
     has_jpa:        bool = True   # spring-boot-starter-data-jpa
     has_lombok:     bool = True   # lombok
@@ -133,9 +131,9 @@ class PomFeatures:
 @dataclass
 class Field:
     """
-    Représente un champ d'une entité JPA.
+    Represents a field in a JPA entity.
 
-    Exemple :
+    Example:
         Field(name="price", java_type="Double", nullable=True)
     """
     name: str
@@ -145,7 +143,7 @@ class Field:
 
     @property
     def capitalized(self) -> str:
-        """Retourne le nom du champ avec la première lettre en majuscule."""
+        """Returns the field name with the first letter capitalized."""
         return self.name[0].upper() + self.name[1:]
 
     @classmethod
@@ -169,17 +167,17 @@ class Field:
 @dataclass
 class Relation:
     """
-    Représente une relation JPA entre deux entités.
+    Represents a JPA relation between two entities.
 
-    Exemple :
+    Example:
         Relation(kind="ManyToMany", target="Category", mapped_by="products")
 
-    Attributs :
-        kind        : type JPA — OneToMany | ManyToOne | ManyToMany
-        target      : nom de l'entité cible (ex: "Category")
-        mapped_by   : nom du champ côté inverse (pour OneToMany / ManyToMany)
-                      Vide si cette entité est le côté propriétaire (ManyToOne)
-        owner       : True si cette entité possède la @JoinTable (côté propriétaire)
+    Attributes:
+        kind        : JPA type — OneToMany | ManyToOne | ManyToMany
+        target      : target entity name (e.g., "Category")
+        mapped_by   : inverse side field name (for OneToMany / ManyToMany)
+                      Empty if this entity is the owning side (ManyToOne)
+        owner       : True if this entity has the @JoinTable (owning side)
     """
     kind: str
     target: str
@@ -188,15 +186,15 @@ class Relation:
 
     @property
     def target_lower(self) -> str:
-        """Retourne le nom de la cible en minuscule (pour les noms de champs)."""
+        """Returns the target name in lowercase (for field names)."""
         return self.target[0].lower() + self.target[1:]
 
     @property
     def field_name(self) -> str:
         """
-        Retourne le nom du champ Java pour cette relation.
-        OneToMany / ManyToMany → liste plurielle  ex: categories
-        ManyToOne              → singulier         ex: category
+        Returns the Java field name for this relation.
+        OneToMany / ManyToMany → plural list    e.g., categories
+        ManyToOne              → singular       e.g., category
         """
         if self.kind in ("OneToMany", "ManyToMany"):
             base = self.target_lower
@@ -224,9 +222,9 @@ class Relation:
 @dataclass
 class Entity:
     """
-    Représente une entité JPA complète avec ses champs et ses relations.
+    Represents a complete JPA entity with its fields and relations.
 
-    Exemple :
+    Example:
         Entity(
             name="Product",
             fields=[Field("name", "String"), Field("price", "Double")],
@@ -239,19 +237,19 @@ class Entity:
 
     @property
     def name_lower(self) -> str:
-        """Retourne le nom de l'entité en camelCase minuscule (ex: product)."""
+        """Returns the entity name in lowercase camelCase (e.g., product)."""
         return self.name[0].lower() + self.name[1:]
 
     @property
     def name_upper(self) -> str:
-        """Retourne le nom de l'entité avec majuscule (ex: Product)."""
+        """Returns the entity name with uppercase (e.g., Product)."""
         return self.name[0].upper() + self.name[1:]
 
     @property
     def extra_imports(self) -> list[str]:
         """
-        Retourne les imports Java supplémentaires nécessaires
-        selon les types de champs utilisés.
+        Returns additional Java imports required
+        based on the field types used.
         """
         imports = set()
         for f in self.fields:
@@ -276,13 +274,13 @@ class Entity:
 @dataclass
 class ProjectConfig:
     """
-    Configuration globale du projet — produit par analyzer.py,
-    consommé par generator.py.
+    Global project configuration — produced by analyzer.py,
+    consumed by generator.py.
 
-    Attributs :
-        base_package : package Java de base détecté ou saisi (ex: com.pio.ecommerce)
-        api_prefix   : préfixe des routes REST (ex: /api/v1)
-        entities     : liste de toutes les entités décrites par l'utilisateur
+    Attributes:
+        base_package : detected or entered base Java package (e.g., com.pio.ecommerce)
+        api_prefix   : REST route prefix (e.g., /api/v1)
+        entities     : list of all entities described by the user
     """
     base_package: str
     api_prefix: str
@@ -294,8 +292,8 @@ class ProjectConfig:
     @property
     def package_path(self) -> str:
         """
-        Convertit le package Java en chemin de dossier.
-        ex: com.pio.ecommerce → com/pio/ecommerce
+        Converts the Java package to a folder path.
+        e.g., com.pio.ecommerce → com/pio/ecommerce
         """
         return self.base_package.replace(".", "/")
 

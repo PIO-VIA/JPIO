@@ -1,11 +1,9 @@
 """
-core/generator.py
------------------
-Prend un ProjectConfig et retourne un dictionnaire :
-    { chemin_relatif_fichier: contenu_java_string }
+Takes a ProjectConfig and returns a dictionary:
+    { relative_file_path: java_content_string }
 
-Utilise Jinja2 pour rendre les templates .j2 en code Java.
-Ne touche pas au disque — c'est le rôle de writer.py.
+Uses Jinja2 to render .j2 templates into Java code.
+Does not touch the disk — that is the role of writer.py.
 """
 
 from pathlib import Path
@@ -15,22 +13,22 @@ from jpio.core.models import ProjectConfig, Entity, PomFeatures
 
 
 # ---------------------------------------------------------------------------
-# Environnement Jinja2
+# Jinja2 Environment
 # ---------------------------------------------------------------------------
 
 def _make_env() -> Environment:
     """
-    Crée l'environnement Jinja2 pointant vers jpio/templates/.
-    PackageLoader cherche les templates dans le package installé,
-    ce qui fonctionne aussi bien en développement qu'après pip install.
+    Creates the Jinja2 environment pointing to jpio/templates/.
+    PackageLoader looks for templates in the installed package,
+    which works both in development and after pip install.
     """
     return Environment(
         autoescape=select_autoescape(
             enabled_extensions=("j2",),
             default_for_string=True,
         ),
-        # On utilise FileSystemLoader en pointant vers le dossier templates
-        # relatif à ce fichier pour la portabilité.
+        # We use FileSystemLoader pointing to the templates folder
+        # relative to this file for portability.
         **_loader_kwargs(),
         trim_blocks=True,
         lstrip_blocks=True,
@@ -44,18 +42,18 @@ def _loader_kwargs() -> dict:
 
 
 # ---------------------------------------------------------------------------
-# Point d'entrée principal
+# Main Entry Point
 # ---------------------------------------------------------------------------
 
 def generate_all(config: ProjectConfig, base_path: Path = Path(".")) -> dict[str, str]:
     """
-    Génère tous les fichiers Java pour le projet.
+    Generates all Java files for the project.
 
-    Retourne :
-        dict dont les clés sont les chemins relatifs depuis la racine du projet
-        et les valeurs sont le contenu Java généré.
+    Returns:
+        dict where keys are relative paths from project root
+        and values are the generated Java content.
 
-    Exemple de clé :
+    Key example:
         "src/main/java/com/pio/ecommerce/models/entity/Product.java"
     """
     from jpio.utils.file_helper import detect_config_format
@@ -65,19 +63,19 @@ def generate_all(config: ProjectConfig, base_path: Path = Path(".")) -> dict[str
 
     java_base = f"src/main/java/{config.package_path}"
 
-    # Détection du format de config pour Swagger
+    # Detect config format for Swagger
     config_format, config_path = detect_config_format(base_path)
     rel_config_path = str(config_path.relative_to(base_path)) if base_path != Path(".") else str(config_path)
 
-    # ── Fichiers par entité ──────────────────────────────────────────────────
+    # ── Entity Files ──────────────────────────────────────────────────
     for entity in config.entities:
         output.update(_generate_entity_files(env, config, entity, java_base))
 
-    # ── Énumérations ─────────────────────────────────────────────────────────
+    # ── Enums ─────────────────────────────────────────────────────────
     for enum_obj in config.enums:
         output.update(_generate_enum_file(env, config, enum_obj, java_base))
 
-    # ── Fichiers globaux (une seule fois par projet) ─────────────────────────
+    # ── Global Files (once per project) ─────────────────────────
     global_ctx = _global_context(config)
 
     global_templates = [
@@ -109,7 +107,7 @@ def generate_all(config: ProjectConfig, base_path: Path = Path(".")) -> dict[str
 
 def _generate_enum_file(env: Environment, config: ProjectConfig, enum_obj, java_base: str) -> dict[str, str]:
     template = env.get_template("entity/enum.java.j2")
-    # On déduit le dossier enum du dossier entity (ex: models/entity -> models/enum)
+    # Infer enum folder from entity folder (e.g., models/entity -> models/enum)
     enum_folder = config.folder_mapping.entity.replace("entity", "enum").replace("entities", "enums")
     if enum_folder == config.folder_mapping.entity:
         enum_folder = "enum"
@@ -147,7 +145,7 @@ def _generate_entity_files(env: Environment, config: ProjectConfig, entity: Enti
 
 def generate_single_entity(config: ProjectConfig, entity: Entity) -> dict[str, str]:
     """
-    Génère les fichiers Java pour une seule entité (sans les configurations globales).
+    Generates Java files for a single entity (without global configurations).
     """
     env = _make_env()
     java_base = f"src/main/java/{config.package_path}"
@@ -155,17 +153,17 @@ def generate_single_entity(config: ProjectConfig, entity: Entity) -> dict[str, s
 
 
 # ---------------------------------------------------------------------------
-# Contextes Jinja2
+# Jinja2 Contexts
 # ---------------------------------------------------------------------------
 
 def _entity_context(entity: Entity, config: ProjectConfig) -> dict:
-    """Construit le contexte Jinja2 pour les templates d'une entité."""
+    """Builds the Jinja2 context for an entity's templates."""
     return {
         "entity":       entity,
         "base_package": config.base_package,
         "api_prefix":   config.api_prefix,
         "pom_features": config.pom_features,
-        # raccourcis pratiques dans les templates
+        # practical shortcuts in templates
         "entity_name":  entity.name,
         "entity_lower": entity.name_lower,
         "fields":       entity.fields,
@@ -175,7 +173,7 @@ def _entity_context(entity: Entity, config: ProjectConfig) -> dict:
 
 
 def _global_context(config: ProjectConfig) -> dict:
-    """Construit le contexte Jinja2 pour les templates globaux."""
+    """Builds the Jinja2 context for global templates."""
     return {
         "base_package": config.base_package,
         "api_prefix":   config.api_prefix,

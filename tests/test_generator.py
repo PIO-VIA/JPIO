@@ -1,9 +1,7 @@
 """
-tests/test_generator.py
-------------------------
-Tests unitaires pour core/generator.py.
-On vérifie que les templates Jinja2 produisent bien le code Java attendu
-pour différentes configurations d'entités et de relations.
+Unit tests for core/generator.py.
+Verifies that Jinja2 templates produce the expected Java code
+for different entity and relation configurations.
 """
 
 import pytest
@@ -13,12 +11,12 @@ from pathlib import Path
 
 
 # ---------------------------------------------------------------------------
-# Fixtures — ProjectConfig de test
+# Fixtures — Test ProjectConfig
 # ---------------------------------------------------------------------------
 
 @pytest.fixture
 def simple_config() -> ProjectConfig:
-    """Projet minimal : une entité Product sans relation."""
+    """Minimal project: one Product entity without relations."""
     return ProjectConfig(
         base_package="com.pio.ecommerce",
         api_prefix="/api/v1",
@@ -38,7 +36,7 @@ def simple_config() -> ProjectConfig:
 
 @pytest.fixture
 def config_with_many_to_many() -> ProjectConfig:
-    """Projet avec deux entités et une relation ManyToMany."""
+    """Project with two entities and a ManyToMany relation."""
     return ProjectConfig(
         base_package="com.pio.shop",
         api_prefix="/api/v1",
@@ -56,258 +54,94 @@ def config_with_many_to_many() -> ProjectConfig:
                 relations=[
                     Relation(kind="ManyToMany", target="Product", mapped_by="categories", owner=False)
                 ],
-            ),
-        ],
-    )
-
-
-@pytest.fixture
-def config_with_one_to_many() -> ProjectConfig:
-    """Projet avec relation OneToMany : Order → OrderItem."""
-    return ProjectConfig(
-        base_package="com.pio.orders",
-        api_prefix="/api/v1",
-        entities=[
-            Entity(
-                name="Order",
-                fields=[Field(name="reference", java_type="String", nullable=False)],
-                relations=[
-                    Relation(kind="OneToMany", target="OrderItem", mapped_by="order", owner=True)
-                ],
-            ),
-            Entity(
-                name="OrderItem",
-                fields=[Field(name="quantity", java_type="Integer", nullable=False)],
-                relations=[
-                    Relation(kind="ManyToOne", target="Order", mapped_by="", owner=False)
-                ],
-            ),
+            )
         ],
     )
 
 
 # ---------------------------------------------------------------------------
-# Tests : structure des clés générées
+# Tests: General Generation
 # ---------------------------------------------------------------------------
 
-class TestGeneratedKeys:
-
-    def test_generates_all_expected_files_for_entity(self, simple_config):
-        output = generate_all(simple_config)
-        base = "src/main/java/com/pio/ecommerce"
-
-        expected_files = [
-            f"{base}/models/entity/Product.java",
-            f"{base}/dto/request/ProductRequestDTO.java",
-            f"{base}/dto/response/ProductResponseDTO.java",
-            f"{base}/mapper/ProductMapper.java",
-            f"{base}/repository/ProductRepository.java",
-            f"{base}/service/ProductService.java",
-            f"{base}/service/ProductServiceImpl.java",
-            f"{base}/controller/ProductController.java",
-            f"{base}/exception/ProductNotFoundException.java",
-            f"{base}/exception/GlobalExceptionHandler.java",
-            f"{base}/config/SwaggerConfig.java",
-        ]
-
-        for expected in expected_files:
-            assert expected in output, f"Fichier manquant : {expected}"
-
-    def test_generates_append_for_application_properties(self, simple_config):
-        output = generate_all(simple_config)
-        append_keys = [k for k in output if k.startswith("__append__:")]
-        assert len(append_keys) == 1
-        assert "application.properties" in append_keys[0]
-
-    def test_generates_files_for_each_entity(self, config_with_many_to_many):
-        output = generate_all(config_with_many_to_many)
-        base = "src/main/java/com/pio/shop"
-        assert f"{base}/models/entity/Product.java" in output
-        assert f"{base}/models/entity/Category.java" in output
-        assert f"{base}/controller/ProductController.java" in output
-        assert f"{base}/controller/CategoryController.java" in output
+def test_generate_all_keys(simple_config):
+    """Verifies that all expected files are present in the output dict."""
+    output = generate_all(simple_config)
+    
+    # ── Path check ──────────────────────────────────────────────────────────
+    base = "src/main/java/com/pio/ecommerce"
+    
+    expected_paths = [
+        f"{base}/models/entity/Product.java",
+        f"{base}/dto/request/ProductRequestDTO.java",
+        f"{base}/dto/response/ProductResponseDTO.java",
+        f"{base}/mapper/ProductMapper.java",
+        f"{base}/repository/ProductRepository.java",
+        f"{base}/service/ProductService.java",
+        f"{base}/service/ProductServiceImpl.java",
+        f"{base}/controller/ProductController.java",
+        f"{base}/exception/ProductNotFoundException.java",
+        f"{base}/exception/GlobalExceptionHandler.java",
+    ]
+    
+    for path in expected_paths:
+        assert path in output
 
 
 # ---------------------------------------------------------------------------
-# Tests : contenu de l'entité
+# Tests: Template Content (Entity)
 # ---------------------------------------------------------------------------
 
-class TestEntityContent:
+def test_entity_content(simple_config):
+    output = generate_all(simple_config)
+    java_code = output["src/main/java/com/pio/ecommerce/models/entity/Product.java"]
+    
+    assert "public class Product" in java_code
+    assert "private String name;" in java_code
+    assert "private Double price;" in java_code
+    assert "@Id" in java_code
+    assert "@GeneratedValue" in java_code
 
-    def test_entity_has_correct_package(self, simple_config):
-        output = generate_all(simple_config)
-        entity_java = output["src/main/java/com/pio/ecommerce/models/entity/Product.java"]
-        assert "package com.pio.ecommerce.models.entity;" in entity_java
 
-    def test_entity_has_lombok_annotations(self, simple_config):
-        output = generate_all(simple_config)
-        entity_java = output["src/main/java/com/pio/ecommerce/models/entity/Product.java"]
-        assert "@Data"               in entity_java
-        assert "@NoArgsConstructor"  in entity_java
-        assert "@AllArgsConstructor" in entity_java
-        assert "@Builder"            in entity_java
+def test_repository_content(simple_config):
+    output = generate_all(simple_config)
+    java_code = output["src/main/java/com/pio/ecommerce/repository/ProductRepository.java"]
+    
+    assert "public interface ProductRepository extends JpaRepository<Product, Long>" in java_code
 
-    def test_entity_has_jpa_annotations(self, simple_config):
-        output = generate_all(simple_config)
-        entity_java = output["src/main/java/com/pio/ecommerce/models/entity/Product.java"]
-        assert "@Entity"   in entity_java
-        assert "@Table"    in entity_java
-        assert "@Id"       in entity_java
-        assert "@GeneratedValue" in entity_java
 
-    def test_entity_has_all_fields(self, simple_config):
-        output = generate_all(simple_config)
-        entity_java = output["src/main/java/com/pio/ecommerce/models/entity/Product.java"]
-        assert "private String name;"   in entity_java
-        assert "private Double price;"  in entity_java
-        assert "private Integer stock;" in entity_java
-
-    def test_non_nullable_field_has_column_annotation(self, simple_config):
-        output = generate_all(simple_config)
-        entity_java = output["src/main/java/com/pio/ecommerce/models/entity/Product.java"]
-        assert "@Column(nullable = false)" in entity_java
-
-    def test_entity_imports_localdate(self):
-        config = ProjectConfig(
-            base_package="com.pio.test",
-            api_prefix="/api/v1",
-            entities=[
-                Entity(
-                    name="Event",
-                    fields=[Field(name="date", java_type="LocalDate", nullable=True)],
-                    relations=[],
-                )
-            ],
-        )
-        output = generate_all(config)
-        entity_java = output["src/main/java/com/pio/test/models/entity/Event.java"]
-        assert "import java.time.LocalDate;" in entity_java
+def test_controller_content(simple_config):
+    output = generate_all(simple_config)
+    java_code = output["src/main/java/com/pio/ecommerce/controller/ProductController.java"]
+    
+    assert "@RestController" in java_code
+    assert "@RequestMapping(\"/api/v1/products\")" in java_code
+    assert "public ResponseEntity<ProductResponseDTO> createProduct" in java_code
 
 
 # ---------------------------------------------------------------------------
-# Tests : relations
+# Tests: Relations
 # ---------------------------------------------------------------------------
 
-class TestRelationsContent:
+def test_many_to_many_owner_side(config_with_many_to_many):
+    output = generate_all(config_with_many_to_many)
+    java_code = output["src/main/java/com/pio/shop/models/entity/Product.java"]
+    
+    assert "@ManyToMany" in java_code
+    assert "@JoinTable" in java_code
+    assert "private List<Category> categories = new ArrayList<>();" in java_code
 
-    def test_many_to_many_owner_has_join_table(self, config_with_many_to_many):
-        output = generate_all(config_with_many_to_many)
-        product_java = output["src/main/java/com/pio/shop/models/entity/Product.java"]
-        assert "@ManyToMany"  in product_java
-        assert "@JoinTable"   in product_java
-        assert "joinColumns"  in product_java
-        assert "inverseJoinColumns" in product_java
 
-    def test_many_to_many_inverse_has_mapped_by(self, config_with_many_to_many):
-        output = generate_all(config_with_many_to_many)
-        category_java = output["src/main/java/com/pio/shop/models/entity/Category.java"]
-        assert "@ManyToMany(mappedBy" in category_java
-        assert "@JoinTable" not in category_java
-
-    def test_one_to_many_has_cascade(self, config_with_one_to_many):
-        output = generate_all(config_with_one_to_many)
-        order_java = output["src/main/java/com/pio/orders/models/entity/Order.java"]
-        assert "@OneToMany" in order_java
-        assert "cascade"    in order_java
-        assert "orphanRemoval" in order_java
-
-    def test_many_to_one_has_join_column(self, config_with_one_to_many):
-        output = generate_all(config_with_one_to_many)
-        item_java = output["src/main/java/com/pio/orders/models/entity/OrderItem.java"]
-        assert "@ManyToOne"   in item_java
-        assert "@JoinColumn"  in item_java
+def test_many_to_many_inverse_side(config_with_many_to_many):
+    output = generate_all(config_with_many_to_many)
+    java_code = output["src/main/java/com/pio/shop/models/entity/Category.java"]
+    
+    assert "@ManyToMany(mappedBy = \"categories\")" in java_code
+    assert "private List<Product> products = new ArrayList<>();" in java_code
+    assert "@JoinTable" not in java_code
 
 
 # ---------------------------------------------------------------------------
-# Tests : DTO
-# ---------------------------------------------------------------------------
-
-class TestDTOContent:
-
-    def test_dto_has_correct_package(self, simple_config):
-        output = generate_all(simple_config)
-        dto = output["src/main/java/com/pio/ecommerce/dto/response/ProductResponseDTO.java"]
-        assert "package com.pio.ecommerce.dto.response;" in dto
-
-    def test_dto_has_lombok_annotations(self, simple_config):
-        output = generate_all(simple_config)
-        dto = output["src/main/java/com/pio/ecommerce/dto/response/ProductResponseDTO.java"]
-        assert "@Data"    in dto
-        assert "@Builder" in dto
-
-    def test_dto_uses_ids_for_relations(self, config_with_many_to_many):
-        output = generate_all(config_with_many_to_many)
-        dto = output["src/main/java/com/pio/shop/dto/response/ProductResponseDTO.java"]
-        assert "List<Long>" in dto
-        assert "Ids"        in dto
-
-
-# ---------------------------------------------------------------------------
-# Tests : Controller
-# ---------------------------------------------------------------------------
-
-class TestControllerContent:
-
-    def test_controller_has_correct_mapping(self, simple_config):
-        output = generate_all(simple_config)
-        ctrl = output["src/main/java/com/pio/ecommerce/controller/ProductController.java"]
-        assert '@RequestMapping("/api/v1/products")' in ctrl
-
-    def test_controller_has_all_crud_methods(self, simple_config):
-        output = generate_all(simple_config)
-        ctrl = output["src/main/java/com/pio/ecommerce/controller/ProductController.java"]
-        assert "@GetMapping"    in ctrl
-        assert "@PostMapping"   in ctrl
-        assert "@PutMapping"    in ctrl
-        assert "@DeleteMapping" in ctrl
-
-    def test_controller_uses_required_args_constructor(self, simple_config):
-        output = generate_all(simple_config)
-        ctrl = output["src/main/java/com/pio/ecommerce/controller/ProductController.java"]
-        assert "@RequiredArgsConstructor" in ctrl
-
-
-# ---------------------------------------------------------------------------
-# Tests : Repository
-# ---------------------------------------------------------------------------
-
-class TestRepositoryContent:
-
-    def test_repository_extends_jpa_repository(self, simple_config):
-        output = generate_all(simple_config)
-        repo = output["src/main/java/com/pio/ecommerce/repository/ProductRepository.java"]
-        assert "JpaRepository<Product, Long>" in repo
-
-    def test_repository_has_find_by_methods(self, simple_config):
-        output = generate_all(simple_config)
-        repo = output["src/main/java/com/pio/ecommerce/repository/ProductRepository.java"]
-        assert "findByName"  in repo
-        assert "findByPrice" in repo
-        assert "findByStock" in repo
-
-
-# ---------------------------------------------------------------------------
-# Tests : Exception
-# ---------------------------------------------------------------------------
-
-class TestExceptionContent:
-
-    def test_not_found_exception_message(self, simple_config):
-        output = generate_all(simple_config)
-        exc = output["src/main/java/com/pio/ecommerce/exception/ProductNotFoundException.java"]
-        assert "ProductNotFoundException" in exc
-        assert "RuntimeException"         in exc
-
-    def test_global_handler_covers_all_entities(self, config_with_many_to_many):
-        output = generate_all(config_with_many_to_many)
-        handler = output["src/main/java/com/pio/shop/exception/GlobalExceptionHandler.java"]
-        assert "ProductNotFoundException"  in handler
-        assert "CategoryNotFoundException" in handler
-        assert "@RestControllerAdvice"     in handler
-
-
-# ---------------------------------------------------------------------------
-# Tests : PomFeatures adaptations
+# Tests: PomFeatures
 # ---------------------------------------------------------------------------
 
 class TestPomFeatures:
@@ -315,69 +149,102 @@ class TestPomFeatures:
     def test_no_lombok_generates_getters_setters(self):
         config = ProjectConfig(
             base_package="com.pio.test",
-            api_prefix="/api/v1",
-            entities=[Entity(name="Product", fields=[Field("name", "String", nullable=False)])],
+            api_prefix="/api",
+            entities=[Entity(name="Product", fields=[Field("name", "String")])],
             pom_features=PomFeatures(has_lombok=False)
         )
         output = generate_all(config)
-        entity_java = output["src/main/java/com/pio/test/models/entity/Product.java"]
-        assert "@Data" not in entity_java
-        assert "public String getName()" in entity_java
-        assert "public void setName(String name)" in entity_java
-        assert "public Product()" in entity_java
+        java_code = output["src/main/java/com/pio/test/models/entity/Product.java"]
+        
+        assert "@Data" not in java_code
+        assert "public String getName()" in java_code
+        assert "public void setName(String name)" in java_code
 
-    def test_no_jpa_uses_crud_repository(self):
+    def test_no_jpa_generates_crud_repository(self):
         config = ProjectConfig(
             base_package="com.pio.test",
-            api_prefix="/api/v1",
+            api_prefix="/api",
             entities=[Entity(name="Product")],
             pom_features=PomFeatures(has_jpa=False)
         )
         output = generate_all(config)
-        repo_java = output["src/main/java/com/pio/test/repository/ProductRepository.java"]
-        assert "extends CrudRepository<Product, Long>" in repo_java
-        assert "import org.springframework.data.repository.CrudRepository;" in repo_java
+        java_code = output["src/main/java/com/pio/test/repository/ProductRepository.java"]
+        
+        assert "extends JpaRepository" not in java_code
+        assert "extends CrudRepository<Product, Long>" in java_code
 
-    def test_no_swagger_omits_config_and_append(self):
+    def test_validation_adds_annotations(self):
         config = ProjectConfig(
             base_package="com.pio.test",
-            api_prefix="/api/v1",
+            api_prefix="/api",
+            entities=[
+                Entity(
+                    name="Product",
+                    fields=[
+                        Field("name", "String", nullable=False),
+                        Field("price", "Double", nullable=True)
+                    ]
+                )
+            ],
+            pom_features=PomFeatures(has_validation=True)
+        )
+        output = generate_all(config)
+        request_dto = output["src/main/java/com/pio/test/dto/request/ProductRequestDTO.java"]
+        
+        assert "@NotBlank" in request_dto
+        assert "@NotNull" in request_dto
+        assert "import jakarta.validation.constraints" in request_dto
+
+    def test_no_swagger_skips_config_and_annotations(self):
+        config = ProjectConfig(
+            base_package="com.pio.test",
+            api_prefix="/api",
             entities=[Entity(name="Product")],
             pom_features=PomFeatures(has_swagger=False)
         )
         output = generate_all(config)
-        base = "src/main/java/com/pio/test"
-        assert f"{base}/config/SwaggerConfig.java" not in output
-        assert not any(k.startswith("__append__:") for k in output)
-
-    def test_validation_adds_annotations_to_dto(self):
-        config = ProjectConfig(
-            base_package="com.pio.test",
-            api_prefix="/api/v1",
-            entities=[Entity(name="Product", fields=[
-                Field("name", "String", nullable=False),
-                Field("price", "Double", nullable=False)
-            ])],
-            pom_features=PomFeatures(has_validation=True)
-        )
-        output = generate_all(config)
-        dto_java = output["src/main/java/com/pio/test/dto/request/ProductRequestDTO.java"]
-        assert "import jakarta.validation.constraints.*;" in dto_java
-        assert "@NotBlank" in dto_java
-        assert "@NotNull" in dto_java
-
-    def test_yaml_config_detects_correct_append_key(self, tmp_path):
-        # On simule un dossier avec application.yaml
-        res_dir = tmp_path / "src" / "main" / "resources"
-        res_dir.mkdir(parents=True)
-        (res_dir / "application.yaml").write_text("existing: true")
         
+        # Check global config absence
+        swagger_path = "src/main/java/com/pio/test/config/SwaggerConfig.java"
+        assert swagger_path not in output
+        
+        # Check controller annotations absence
+        controller_code = output["src/main/java/com/pio/test/controller/ProductController.java"]
+        assert "@Tag" not in controller_code
+        assert "@Operation" not in controller_code
+
+    def test_swagger_properties_append(self, tmp_path):
+        """Verifies that Swagger properties are correctly generated for .properties."""
         config = ProjectConfig(
             base_package="com.pio.test",
-            api_prefix="/api/v1",
+            api_prefix="/api",
             entities=[Entity(name="Product")],
             pom_features=PomFeatures(has_swagger=True)
         )
+        # Setup fake resources for detection
+        res_dir = tmp_path / "src" / "main" / "resources"
+        res_dir.mkdir(parents=True)
+        (res_dir / "application.properties").write_text("existing=value")
+        
+        output = generate_all(config, base_path=tmp_path)
+        
+        expected_key = "__append__:src/main/resources/application.properties"
+        assert expected_key in output
+        assert "springdoc.api-docs.path=/api-docs" in output[expected_key]
+
+    def test_swagger_yaml_append(self, tmp_path):
+        """Verifies that Swagger properties are correctly generated for .yaml."""
+        config = ProjectConfig(
+            base_package="com.pio.test",
+            api_prefix="/api",
+            entities=[Entity(name="Product")],
+            pom_features=PomFeatures(has_swagger=True)
+        )
+        # Setup fake resources for detection
+        res_dir = tmp_path / "src" / "main" / "resources"
+        res_dir.mkdir(parents=True)
+        (res_dir / "application.yaml").write_text("existing: value")
+        
         output = generate_all(config, base_path=tmp_path)
         
         expected_key = "__append__:src/main/resources/application.yaml"

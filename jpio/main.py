@@ -1,11 +1,9 @@
 """
-main.py
--------
-Point d'entrée du CLI JPIO.
-Déclare le groupe de commandes Click et enregistre toutes les sous-commandes.
+Entry point for the JPIO CLI.
+Declares the Click command group and registers all subcommands.
 
-Après pip install, la commande `jpio` est disponible partout
-grâce à la config [project.scripts] dans pyproject.toml :
+After pip install, the `jpio` command is available everywhere
+thanks to the [project.scripts] config in pyproject.toml:
     jpio = "jpio.main:cli"
 """
 
@@ -16,14 +14,14 @@ from jpio.commands.add import add_command
 
 
 @click.group()
-@click.version_option(version="0.2.0", prog_name="JPIO")
+@click.version_option(version="0.4.0", prog_name="JPIO")
 def cli():
     """
     \b
     JPIO — Java Project Input/Output
     Spring Boot Scaffolding CLI
 
-    Lancez `jpio start` depuis la racine de votre projet Spring Boot.
+    Run `jpio start` from the root of your Spring Boot project.
     """
     pass
 

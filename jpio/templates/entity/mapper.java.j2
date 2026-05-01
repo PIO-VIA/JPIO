@@ -52,11 +52,11 @@ public class {{ entity_name }}Mapper {
                 .{{ field.name }}(dto.get{{ field.capitalized }}())
 {% endfor %}
                 .build();
-        // Note : les relations sont gérées dans le Service
-        // pour éviter les dépendances circulaires entre Mappers.
+        // Note: relations are handled in the Service
+        // to avoid circular dependencies between Mappers.
     }
 
-    // ── Liste Entity → Liste ResponseDTO ────────────────────────────────────
+    // ── List Entity → List ResponseDTO ────────────────────────────────────
     public List<{{ entity_name }}ResponseDTO> toResponseDTOList(List<{{ entity_name }}> entities) {
         if (entities == null) return List.of();
         return entities.stream()

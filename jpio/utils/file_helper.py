@@ -1,8 +1,7 @@
 """
-utils/file_helper.py
---------------------
-Opérations sur le système de fichiers.
-Toute manipulation de chemins et de fichiers passe par ici.
+
+File system operations.
+All path and file manipulations go through here.
 """
 
 import os
@@ -28,23 +27,23 @@ EXPECTED_FOLDERS = {
 
 
 # ---------------------------------------------------------------------------
-# Détection du projet Spring Boot
+# Spring Boot Project Detection
 # ---------------------------------------------------------------------------
 
 def is_spring_boot_project(path: Path = Path(".")) -> bool:
     """
-    Vérifie que le dossier courant est bien un projet Spring Boot.
-    Critères : présence de pom.xml ET de src/main/java/
+    Verifies that the current folder is indeed a Spring Boot project.
+    Criteria: presence of pom.xml AND src/main/java/
     """
     return (path / "pom.xml").exists() and (path / "src" / "main" / "java").exists()
 
 
 def detect_base_package(path: Path = Path(".")) -> str | None:
     """
-    Scanne src/main/java/ pour trouver le fichier *Application.java
-    et en déduire le package de base automatiquement.
+    Scans src/main/java/ to find the *Application.java file
+    and automatically infer the base package.
 
-    Retourne le package (ex: "com.pio.ecommerce") ou None si non trouvé.
+    Returns the package (e.g., "com.pio.ecommerce") or None if not found.
     """
     java_root = path / "src" / "main" / "java"
     if not java_root.exists():
@@ -61,8 +60,8 @@ def detect_base_package(path: Path = Path(".")) -> str | None:
 
 def detect_project_name(path: Path = Path(".")) -> str:
     """
-    Lit le pom.xml pour extraire l'artifactId comme nom du projet.
-    Retourne le nom du dossier courant si non trouvé.
+    Reads pom.xml to extract artifactId as the project name.
+    Returns the current folder name if not found.
     """
     pom = path / "pom.xml"
     if pom.exists():
@@ -75,17 +74,17 @@ def detect_project_name(path: Path = Path(".")) -> str:
 
 def detect_config_format(path: Path = Path(".")) -> tuple[str, Path]:
     """
-    Détecte le format de configuration Spring Boot utilisé dans le projet.
+    Detects the Spring Boot configuration format used in the project.
 
-    Règles de priorité :
-    1. Si application.properties existe → retourne ("properties", chemin)
-    2. Si application.yaml existe       → retourne ("yaml", chemin)
-    3. Si application.yml existe        → retourne ("yaml", chemin)
-    4. Si plusieurs existent            → prend properties en priorité, log un warning
-    5. Si aucun n'existe                → retourne ("properties", chemin) par défaut
-                                          et log un warning
+    Priority rules:
+    1. If application.properties exists → returns ("properties", path)
+    2. If application.yaml exists       → returns ("yaml", path)
+    3. If application.yml exists        → returns ("yaml", path)
+    4. If multiple exist                → takes properties by default, logs a warning
+    5. If none exist                    → returns ("properties", path) by default
+                                          and logs a warning
 
-    Retourne un tuple (format: str, filepath: Path)
+    Returns a tuple (format: str, filepath: Path)
     """
     res_dir = resources_root(path)
     prop_path = res_dir / "application.properties"
@@ -98,15 +97,15 @@ def detect_config_format(path: Path = Path(".")) -> tuple[str, Path]:
     if yml_path.exists():  found.append(("yaml", yml_path))
 
     if len(found) > 1:
-        logger.warning("Plusieurs fichiers de configuration détectés. 'application.properties' sera utilisé par défaut.")
-        # On cherche spécifiquement properties dans la liste
+        logger.warning("Multiple configuration files detected. 'application.properties' will be used by default.")
+        # Specifically look for properties in the list
         for fmt, p in found:
             if fmt == "properties":
                 return fmt, p
         return found[0]
 
     if not found:
-        logger.warning("Aucun fichier de configuration détecté. Utilisation de 'application.properties' par défaut.")
+        logger.warning("No configuration file detected. Using 'application.properties' by default.")
         return "properties", prop_path
 
     return found[0]
@@ -114,8 +113,8 @@ def detect_config_format(path: Path = Path(".")) -> tuple[str, Path]:
 
 def detect_existing_folders(package_path: Path) -> FolderMapping:
     """
-    Scanne le dossier du package Java pour détecter les dossiers existants.
-    Retourne un FolderMapping avec les noms réels trouvés.
+    Scans the Java package folder to detect existing directories.
+    Returns a FolderMapping with the actual names found.
     """
     mapping_dict = {}
     if package_path.exists():
@@ -123,7 +122,7 @@ def detect_existing_folders(package_path: Path) -> FolderMapping:
             for syn in synonyms:
                 path = package_path / syn
                 if path.is_dir():
-                    # Cas spécial pour 'models/entity'
+                    # Special case for 'models/entity'
                     if syn == "models" and layer == "entity":
                         if (path / "entity").is_dir():
                             mapping_dict[layer] = "models/entity"
@@ -140,15 +139,15 @@ def detect_existing_folders(package_path: Path) -> FolderMapping:
 
 def analyze_pom(path: Path = Path(".")) -> PomFeatures:
     """
-    Lit le pom.xml et détecte les dépendances présentes.
+    Reads pom.xml and detects present dependencies.
 
-    Dépendances à détecter (chercher les artifactId dans le contenu XML) :
+    Dependencies to detect (searching for artifactId in XML content):
     - has_jpa        : "spring-boot-starter-data-jpa"
     - has_lombok     : "lombok"
-    - has_swagger    : "springdoc-openapi-starter-webmvc-ui" OU "springdoc-openapi-ui"
+    - has_swagger    : "springdoc-openapi-starter-webmvc-ui" OR "springdoc-openapi-ui"
     - has_validation : "spring-boot-starter-validation"
 
-    Si pom.xml est absent ou illisible, retourne PomFeatures() avec les valeurs par défaut.
+    If pom.xml is missing or unreadable, returns PomFeatures() with default values.
     """
     pom_path = path / "pom.xml"
     if not pom_path.exists():
@@ -163,26 +162,26 @@ def analyze_pom(path: Path = Path(".")) -> PomFeatures:
             has_validation="spring-boot-starter-validation" in content
         )
     except Exception as e:
-        logger.warning(f"Erreur lors de la lecture du pom.xml : {e}. Utilisation des valeurs par défaut.")
+        logger.warning(f"Error reading pom.xml: {e}. Using default values.")
         return PomFeatures()
 
 
 # ---------------------------------------------------------------------------
-# Opérations sur les fichiers générés
+# Generated Files Operations
 # ---------------------------------------------------------------------------
 
 def ensure_dir(directory: Path) -> None:
-    """Crée un dossier et tous ses parents si nécessaire."""
+    """Creates a directory and all its parents if necessary."""
     directory.mkdir(parents=True, exist_ok=True)
 
 
 def write_file(filepath: Path, content: str, overwrite: bool = False) -> bool:
     """
-    Écrit le contenu dans un fichier.
+    Writes content to a file.
 
-    - Si le fichier existe et overwrite=False, ne fait rien et retourne False.
-    - Crée les dossiers parents si nécessaire.
-    - Retourne True si le fichier a été écrit.
+    - If file exists and overwrite=False, does nothing and returns False.
+    - Creates parent directories if necessary.
+    - Returns True if the file was written.
     """
     if filepath.exists() and not overwrite:
         return False
@@ -194,22 +193,22 @@ def write_file(filepath: Path, content: str, overwrite: bool = False) -> bool:
 
 def append_to_file(filepath: Path, content: str) -> None:
     """
-    Ajoute du contenu à la fin d'un fichier existant.
-    Utilisé pour application.properties (ajout config Swagger).
+    Appends content to the end of an existing file.
+    Used for application.properties (adding Swagger config).
     """
     with open(filepath, "a", encoding="utf-8") as f:
         f.write(content)
 
 
 # ---------------------------------------------------------------------------
-# Chemins Java
+# Java Paths
 # ---------------------------------------------------------------------------
 
 def java_source_root(base_path: Path, base_package: str) -> Path:
     """
-    Retourne le chemin racine des sources Java pour un package donné.
+    Returns the root path for Java sources for a given package.
 
-    ex: base_package = "com.pio.ecommerce"
+    e.g.: base_package = "com.pio.ecommerce"
     →   ./src/main/java/com/pio/ecommerce/
     """
     package_path = base_package.replace(".", os.sep)
@@ -217,5 +216,5 @@ def java_source_root(base_path: Path, base_package: str) -> Path:
 
 
 def resources_root(base_path: Path = Path(".")) -> Path:
-    """Retourne le chemin du dossier resources."""
+    """Returns the path to the resources folder."""
     return base_path / "src" / "main" / "resources"

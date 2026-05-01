@@ -52,7 +52,7 @@ Then you write the same `JpaRepository` interfaces, the same CRUD controllers, t
 ## Installation
 
 ```bash
-pip install jpio
+pip install jpio-cli
 ```
 
 **Requirements:**

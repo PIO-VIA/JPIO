@@ -1,13 +1,12 @@
 """
-core/writer.py
---------------
-Prend le dict { filepath: java_code } produit par generator.py
-et écrit les fichiers sur le disque.
 
-Convention spéciale :
-    Les clés préfixées par "__append__:" ne créent pas un nouveau fichier
-    mais ajoutent le contenu à la fin d'un fichier existant
-    (ex: application.properties).
+Takes the dict { filepath: java_code } produced by generator.py
+and writes the files to disk.
+
+Special convention:
+    Keys prefixed with "__append__:" do not create a new file
+    but append the content to the end of an existing file
+    (e.g., application.properties).
 """
 
 from pathlib import Path
@@ -23,20 +22,20 @@ def write_all(
     base_path: Path = Path("."),
 ) -> int:
     """
-    Écrit tous les fichiers générés sur le disque.
+    Writes all generated files to disk.
 
-    Paramètres :
-        generated : dict { chemin_relatif: contenu }
-        base_path : racine du projet Spring Boot (par défaut dossier courant)
+    Parameters:
+        generated: dict { relative_path: content }
+        base_path: root of the Spring Boot project (defaults to current folder)
 
-    Retourne :
-        Le nombre de fichiers effectivement écrits.
+    Returns:
+        The number of files actually written.
     """
     written_count = 0
 
     for rel_path, content in generated.items():
 
-        # ── Mode append (application.properties) ────────────────────────────
+        # ── Append mode (application.properties) ────────────────────────────
         if rel_path.startswith(APPEND_PREFIX):
             actual_path = base_path / rel_path[len(APPEND_PREFIX):]
 
@@ -46,11 +45,11 @@ def write_all(
                 written_count += 1
             else:
                 print_warning(
-                    f"Fichier introuvable pour append : {actual_path} — ignoré."
+                    f"File not found for append: {actual_path} — skipping."
                 )
             continue
 
-        # ── Mode création normale ────────────────────────────────────────────
+        # ── Normal creation mode ────────────────────────────────────────────
         filepath = base_path / rel_path
         was_written = write_file(filepath, content, overwrite=False)
 
@@ -58,6 +57,6 @@ def write_all(
             print_file_created(rel_path)
             written_count += 1
         else:
-            print_warning(f"Fichier déjà existant — ignoré : {rel_path}")
+            print_warning(f"File already exists — skipping: {rel_path}")
 
     return written_count

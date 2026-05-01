@@ -3,7 +3,7 @@ package {{ base_package }}.exception;
 public class {{ entity_name }}NotFoundException extends RuntimeException {
 
     public {{ entity_name }}NotFoundException(Long id) {
-        super("{{ entity_name }} introuvable avec l'id : " + id);
+        super("{{ entity_name }} not found with id: " + id);
     }
 
     public {{ entity_name }}NotFoundException(String message) {
