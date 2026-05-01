@@ -15,6 +15,7 @@ from jpio.core.models import (
     Field,
     Relation,
     Enum,
+    PomFeatures,
     SUPPORTED_JAVA_TYPES,
     SUPPORTED_RELATIONS,
 )
@@ -47,11 +48,14 @@ QSTYLE = questionary.Style([
 # Collecte du ProjectConfig
 # ---------------------------------------------------------------------------
 
-def run_wizard() -> ProjectConfig:
+def run_wizard(pom_features: PomFeatures = None) -> ProjectConfig:
     """
     Lance le questionnaire complet et retourne un ProjectConfig.
     Point d'entrée appelé par commands/new.py
     """
+    if pom_features is None:
+        pom_features = PomFeatures()
+
     base_path = Path(".")
 
     # ── Package de base ─────────────────────────────────────────────────────
@@ -115,6 +119,7 @@ def run_wizard() -> ProjectConfig:
         api_prefix=api_prefix,
         entities=entities,
         enums=enums,
+        pom_features=pom_features,
     )
 
 

@@ -3,7 +3,9 @@ package {{ base_package }}.controller;
 import {{ base_package }}.dto.request.{{ entity_name }}RequestDTO;
 import {{ base_package }}.dto.response.{{ entity_name }}ResponseDTO;
 import {{ base_package }}.service.{{ entity_name }}Service;
+{% if pom_features.has_lombok %}
 import lombok.RequiredArgsConstructor;
+{% endif %}
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -12,10 +14,18 @@ import java.util.List;
 
 @RestController
 @RequestMapping("{{ api_prefix }}/{{ entity_name | lower }}s")
+{% if pom_features.has_lombok %}
 @RequiredArgsConstructor
+{% endif %}
 public class {{ entity_name }}Controller {
 
     private final {{ entity_name }}Service {{ entity_lower }}Service;
+
+{% if not pom_features.has_lombok %}
+    public {{ entity_name }}Controller({{ entity_name }}Service {{ entity_lower }}Service) {
+        this.{{ entity_lower }}Service = {{ entity_lower }}Service;
+    }
+{% endif %}
 
     // ── GET /{{ api_prefix }}/{{ entity_name | lower }}s ─────────────────────────────────────────
 

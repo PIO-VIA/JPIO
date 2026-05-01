@@ -11,7 +11,7 @@ Ne touche pas au disque — c'est le rôle de writer.py.
 from pathlib import Path
 from jinja2 import Environment, PackageLoader, select_autoescape
 
-from jpio.core.models import ProjectConfig, Entity
+from jpio.core.models import ProjectConfig, Entity, PomFeatures
 
 
 # ---------------------------------------------------------------------------
@@ -47,7 +47,7 @@ def _loader_kwargs() -> dict:
 # Point d'entrée principal
 # ---------------------------------------------------------------------------
 
-def generate_all(config: ProjectConfig) -> dict[str, str]:
+def generate_all(config: ProjectConfig, base_path: Path = Path(".")) -> dict[str, str]:
     """
     Génère tous les fichiers Java pour le projet.
 
@@ -56,12 +56,18 @@ def generate_all(config: ProjectConfig) -> dict[str, str]:
         et les valeurs sont le contenu Java généré.
 
     Exemple de clé :
-        "src/main/java/com/pio/ecommerce/entity/Product.java"
+        "src/main/java/com/pio/ecommerce/models/entity/Product.java"
     """
+    from jpio.utils.file_helper import detect_config_format
+
     env    = _make_env()
     output = {}
 
     java_base = f"src/main/java/{config.package_path}"
+
+    # Détection du format de config pour Swagger
+    config_format, config_path = detect_config_format(base_path)
+    rel_config_path = str(config_path.relative_to(base_path)) if base_path != Path(".") else str(config_path)
 
     # ── Fichiers par entité ──────────────────────────────────────────────────
     for entity in config.entities:
@@ -76,19 +82,27 @@ def generate_all(config: ProjectConfig) -> dict[str, str]:
 
     global_templates = [
         ("exception/global_exception_handler.java.j2",
-         f"{java_base}/exception/GlobalExceptionHandler.java"),
-        ("config/swagger_config.java.j2",
-         f"{java_base}/config/SwaggerConfig.java"),
+         f"{java_base}/exception/GlobalExceptionHandler.java")
     ]
+    
+    if config.pom_features.has_swagger:
+        global_templates.append(
+            ("config/swagger_config.java.j2",
+             f"{java_base}/config/SwaggerConfig.java")
+        )
 
     for template_name, dest_path in global_templates:
         template = env.get_template(template_name)
         output[dest_path] = template.render(**global_ctx)
 
-    # ── application.properties (append) ────────────────────────────────────
-    template = env.get_template("project/application.properties.j2")
-    output["__append__:src/main/resources/application.properties"] = \
-        template.render(**global_ctx)
+    # ── application.properties / yaml (append) ──────────────────────────────
+    if config.pom_features.has_swagger:
+        if config_format == "properties":
+            template = env.get_template("project/application.properties.j2")
+        else:
+            template = env.get_template("project/application.yaml.j2")
+            
+        output[f"__append__:{rel_config_path}"] = template.render(**global_ctx)
 
     return output
 
@@ -145,6 +159,7 @@ def _entity_context(entity: Entity, config: ProjectConfig) -> dict:
         "entity":       entity,
         "base_package": config.base_package,
         "api_prefix":   config.api_prefix,
+        "pom_features": config.pom_features,
         # raccourcis pratiques dans les templates
         "entity_name":  entity.name,
         "entity_lower": entity.name_lower,
@@ -160,4 +175,5 @@ def _global_context(config: ProjectConfig) -> dict:
         "base_package": config.base_package,
         "api_prefix":   config.api_prefix,
         "entities":     config.entities,
+        "pom_features": config.pom_features,
     }

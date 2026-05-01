@@ -60,6 +60,35 @@ class Enum:
 
 
 @dataclass
+class PomFeatures:
+    """
+    Résultat de l'analyse du pom.xml.
+    Chaque attribut correspond à une dépendance Spring Boot détectée.
+    """
+    has_jpa:        bool = True   # spring-boot-starter-data-jpa
+    has_lombok:     bool = True   # lombok
+    has_swagger:    bool = True   # springdoc-openapi
+    has_validation: bool = False  # spring-boot-starter-validation
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "PomFeatures":
+        return cls(
+            has_jpa=data.get("has_jpa", True),
+            has_lombok=data.get("has_lombok", True),
+            has_swagger=data.get("has_swagger", True),
+            has_validation=data.get("has_validation", False)
+        )
+
+    def to_dict(self) -> dict:
+        return {
+            "has_jpa": self.has_jpa,
+            "has_lombok": self.has_lombok,
+            "has_swagger": self.has_swagger,
+            "has_validation": self.has_validation
+        }
+
+
+@dataclass
 class Field:
     """
     Représente un champ d'une entité JPA.
@@ -217,6 +246,7 @@ class ProjectConfig:
     api_prefix: str
     entities: list[Entity] = field(default_factory=list)
     enums: list[Enum] = field(default_factory=list)
+    pom_features: PomFeatures = field(default_factory=PomFeatures)
 
     @property
     def package_path(self) -> str:
@@ -230,11 +260,13 @@ class ProjectConfig:
     def from_dict(cls, data: dict) -> "ProjectConfig":
         entities = [Entity.from_dict(e) for e in data.get("entities", [])]
         enums = [Enum.from_dict(e) for e in data.get("enums", [])]
+        pom_features = PomFeatures.from_dict(data.get("pom_features", {}))
         return cls(
             base_package=data["base_package"],
             api_prefix=data.get("api_prefix", "/api/v1"),
             entities=entities,
-            enums=enums
+            enums=enums,
+            pom_features=pom_features
         )
 
     def to_dict(self) -> dict:
@@ -242,5 +274,6 @@ class ProjectConfig:
             "base_package": self.base_package,
             "api_prefix": self.api_prefix,
             "entities": [e.to_dict() for e in self.entities],
-            "enums": [e.to_dict() for e in self.enums]
+            "enums": [e.to_dict() for e in self.enums],
+            "pom_features": self.pom_features.to_dict()
         }

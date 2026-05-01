@@ -7,8 +7,9 @@ pour différentes configurations d'entités et de relations.
 """
 
 import pytest
-from jpio.core.models import ProjectConfig, Entity, Field, Relation
+from jpio.core.models import ProjectConfig, Entity, Field, Relation, PomFeatures
 from jpio.core.generator import generate_all
+from pathlib import Path
 
 
 # ---------------------------------------------------------------------------
@@ -303,3 +304,82 @@ class TestExceptionContent:
         assert "ProductNotFoundException"  in handler
         assert "CategoryNotFoundException" in handler
         assert "@RestControllerAdvice"     in handler
+
+
+# ---------------------------------------------------------------------------
+# Tests : PomFeatures adaptations
+# ---------------------------------------------------------------------------
+
+class TestPomFeatures:
+
+    def test_no_lombok_generates_getters_setters(self):
+        config = ProjectConfig(
+            base_package="com.pio.test",
+            api_prefix="/api/v1",
+            entities=[Entity(name="Product", fields=[Field("name", "String", nullable=False)])],
+            pom_features=PomFeatures(has_lombok=False)
+        )
+        output = generate_all(config)
+        entity_java = output["src/main/java/com/pio/test/models/entity/Product.java"]
+        assert "@Data" not in entity_java
+        assert "public String getName()" in entity_java
+        assert "public void setName(String name)" in entity_java
+        assert "public Product()" in entity_java
+
+    def test_no_jpa_uses_crud_repository(self):
+        config = ProjectConfig(
+            base_package="com.pio.test",
+            api_prefix="/api/v1",
+            entities=[Entity(name="Product")],
+            pom_features=PomFeatures(has_jpa=False)
+        )
+        output = generate_all(config)
+        repo_java = output["src/main/java/com/pio/test/repository/ProductRepository.java"]
+        assert "extends CrudRepository<Product, Long>" in repo_java
+        assert "import org.springframework.data.repository.CrudRepository;" in repo_java
+
+    def test_no_swagger_omits_config_and_append(self):
+        config = ProjectConfig(
+            base_package="com.pio.test",
+            api_prefix="/api/v1",
+            entities=[Entity(name="Product")],
+            pom_features=PomFeatures(has_swagger=False)
+        )
+        output = generate_all(config)
+        base = "src/main/java/com/pio/test"
+        assert f"{base}/config/SwaggerConfig.java" not in output
+        assert not any(k.startswith("__append__:") for k in output)
+
+    def test_validation_adds_annotations_to_dto(self):
+        config = ProjectConfig(
+            base_package="com.pio.test",
+            api_prefix="/api/v1",
+            entities=[Entity(name="Product", fields=[
+                Field("name", "String", nullable=False),
+                Field("price", "Double", nullable=False)
+            ])],
+            pom_features=PomFeatures(has_validation=True)
+        )
+        output = generate_all(config)
+        dto_java = output["src/main/java/com/pio/test/dto/request/ProductRequestDTO.java"]
+        assert "import jakarta.validation.constraints.*;" in dto_java
+        assert "@NotBlank" in dto_java
+        assert "@NotNull" in dto_java
+
+    def test_yaml_config_detects_correct_append_key(self, tmp_path):
+        # On simule un dossier avec application.yaml
+        res_dir = tmp_path / "src" / "main" / "resources"
+        res_dir.mkdir(parents=True)
+        (res_dir / "application.yaml").write_text("existing: true")
+        
+        config = ProjectConfig(
+            base_package="com.pio.test",
+            api_prefix="/api/v1",
+            entities=[Entity(name="Product")],
+            pom_features=PomFeatures(has_swagger=True)
+        )
+        output = generate_all(config, base_path=tmp_path)
+        
+        expected_key = "__append__:src/main/resources/application.yaml"
+        assert expected_key in output
+        assert "springdoc:" in output[expected_key]

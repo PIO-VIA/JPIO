@@ -10,7 +10,9 @@ import {{ base_package }}.repository.{{ entity_name }}Repository;
 import {{ base_package }}.models.entity.{{ relation.target }};
 import {{ base_package }}.repository.{{ relation.target }}Repository;
 {% endfor %}
+{% if pom_features.has_lombok %}
 import lombok.RequiredArgsConstructor;
+{% endif %}
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,7 +22,9 @@ import java.util.stream.Collectors;
 {% endif %}
 
 @Service
+{% if pom_features.has_lombok %}
 @RequiredArgsConstructor
+{% endif %}
 @Transactional
 public class {{ entity_name }}ServiceImpl implements {{ entity_name }}Service {
 
@@ -29,6 +33,22 @@ public class {{ entity_name }}ServiceImpl implements {{ entity_name }}Service {
 {% for relation in relations %}
     private final {{ relation.target }}Repository {{ relation.target_lower }}Repository;
 {% endfor %}
+
+{% if not pom_features.has_lombok %}
+    public {{ entity_name }}ServiceImpl(
+            {{ entity_name }}Repository {{ entity_lower }}Repository,
+            {{ entity_name }}Mapper {{ entity_lower }}Mapper{% if relations %},{% endif %}
+{% for relation in relations %}
+            {{ relation.target }}Repository {{ relation.target_lower }}Repository{% if not loop.last %},{% endif %}
+{% endfor %}
+    ) {
+        this.{{ entity_lower }}Repository = {{ entity_lower }}Repository;
+        this.{{ entity_lower }}Mapper = {{ entity_lower }}Mapper;
+{% for relation in relations %}
+        this.{{ relation.target_lower }}Repository = {{ relation.target_lower }}Repository;
+{% endfor %}
+    }
+{% endif %}
 
     // ── findAll ──────────────────────────────────────────────────────────────
 

@@ -8,6 +8,11 @@ Toute manipulation de chemins et de fichiers passe par ici.
 import os
 import re
 from pathlib import Path
+import logging
+
+from jpio.core.models import PomFeatures
+
+logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
@@ -54,6 +59,74 @@ def detect_project_name(path: Path = Path(".")) -> str:
         if match:
             return match.group(1).strip()
     return path.resolve().name
+
+
+def detect_config_format(path: Path = Path(".")) -> tuple[str, Path]:
+    """
+    Détecte le format de configuration Spring Boot utilisé dans le projet.
+
+    Règles de priorité :
+    1. Si application.properties existe → retourne ("properties", chemin)
+    2. Si application.yaml existe       → retourne ("yaml", chemin)
+    3. Si application.yml existe        → retourne ("yaml", chemin)
+    4. Si plusieurs existent            → prend properties en priorité, log un warning
+    5. Si aucun n'existe                → retourne ("properties", chemin) par défaut
+                                          et log un warning
+
+    Retourne un tuple (format: str, filepath: Path)
+    """
+    res_dir = resources_root(path)
+    prop_path = res_dir / "application.properties"
+    yaml_path = res_dir / "application.yaml"
+    yml_path  = res_dir / "application.yml"
+
+    found = []
+    if prop_path.exists(): found.append(("properties", prop_path))
+    if yaml_path.exists(): found.append(("yaml", yaml_path))
+    if yml_path.exists():  found.append(("yaml", yml_path))
+
+    if len(found) > 1:
+        logger.warning("Plusieurs fichiers de configuration détectés. 'application.properties' sera utilisé par défaut.")
+        # On cherche spécifiquement properties dans la liste
+        for fmt, p in found:
+            if fmt == "properties":
+                return fmt, p
+        return found[0]
+
+    if not found:
+        logger.warning("Aucun fichier de configuration détecté. Utilisation de 'application.properties' par défaut.")
+        return "properties", prop_path
+
+    return found[0]
+
+
+def analyze_pom(path: Path = Path(".")) -> PomFeatures:
+    """
+    Lit le pom.xml et détecte les dépendances présentes.
+
+    Dépendances à détecter (chercher les artifactId dans le contenu XML) :
+    - has_jpa        : "spring-boot-starter-data-jpa"
+    - has_lombok     : "lombok"
+    - has_swagger    : "springdoc-openapi-starter-webmvc-ui" OU "springdoc-openapi-ui"
+    - has_validation : "spring-boot-starter-validation"
+
+    Si pom.xml est absent ou illisible, retourne PomFeatures() avec les valeurs par défaut.
+    """
+    pom_path = path / "pom.xml"
+    if not pom_path.exists():
+        return PomFeatures()
+
+    try:
+        content = pom_path.read_text(encoding="utf-8")
+        return PomFeatures(
+            has_jpa="spring-boot-starter-data-jpa" in content,
+            has_lombok="lombok" in content,
+            has_swagger="springdoc-openapi-starter-webmvc-ui" in content or "springdoc-openapi-ui" in content,
+            has_validation="spring-boot-starter-validation" in content
+        )
+    except Exception as e:
+        logger.warning(f"Erreur lors de la lecture du pom.xml : {e}. Utilisation des valeurs par défaut.")
+        return PomFeatures()
 
 
 # ---------------------------------------------------------------------------

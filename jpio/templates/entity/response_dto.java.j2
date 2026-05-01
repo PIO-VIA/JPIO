@@ -1,6 +1,11 @@
 package {{ base_package }}.dto.response;
 
+{% if pom_features.has_lombok %}
 import lombok.*;
+{% endif %}
+{% if pom_features.has_validation %}
+import jakarta.validation.constraints.*;
+{% endif %}
 {% for import in extra_imports %}
 import {{ import }};
 {% endfor %}
@@ -13,15 +18,24 @@ import {{ base_package }}.models.enum.{{ field.java_type }};
 import java.util.List;
 {% endfor %}
 
+{% if pom_features.has_lombok %}
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+{% endif %}
 public class {{ entity_name }}ResponseDTO {
 
     private Long id;
 
 {% for field in fields %}
+    {% if pom_features.has_validation and not field.nullable %}
+        {% if field.java_type == "String" %}
+    @NotBlank
+        {% else %}
+    @NotNull
+        {% endif %}
+    {% endif %}
     private {{ field.java_type }} {{ field.name }};
 {% endfor %}
 {% for relation in relations %}
@@ -32,4 +46,25 @@ public class {{ entity_name }}ResponseDTO {
     {% endif %}
 {% endfor %}
 
+{% if not pom_features.has_lombok %}
+    // ── Getters & Setters ────────────────────────────────────────────────────
+
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+
+{% for field in fields %}
+    public {{ field.java_type }} get{{ field.capitalized }}() { return {{ field.name }}; }
+    public void set{{ field.capitalized }}({{ field.java_type }} {{ field.name }}) { this.{{ field.name }} = {{ field.name }}; }
+{% endfor %}
+
+{% for relation in relations %}
+    {% if relation.kind in ("OneToMany", "ManyToMany") %}
+    public List<Long> get{{ relation.field_name | capitalize }}Ids() { return {{ relation.field_name }}Ids; }
+    public void set{{ relation.field_name | capitalize }}Ids(List<Long> ids) { this.{{ relation.field_name }}Ids = ids; }
+    {% else %}
+    public Long get{{ relation.target }}Id() { return {{ relation.target_lower }}Id; }
+    public void set{{ relation.target }}Id(Long id) { this.{{ relation.target_lower }}Id = id; }
+    {% endif %}
+{% endfor %}
+{% endif %}
 }

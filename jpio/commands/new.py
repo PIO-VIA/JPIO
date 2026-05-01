@@ -24,6 +24,7 @@ from jpio.utils.console import (
 from jpio.utils.file_helper import (
     is_spring_boot_project,
     detect_project_name,
+    analyze_pom,
 )
 
 
@@ -49,8 +50,31 @@ def start_command():
     project_name = detect_project_name(base_path)
     print_success(f"Projet Spring Boot détecté : [bold cyan]{project_name}[/bold cyan]")
 
+    # ── Analyse du pom.xml ───────────────────────────────────────────────────
+    pom_features = analyze_pom(base_path)
+    
+    if pom_features.has_jpa:
+        print_info("JPA détecté ✔")
+    else:
+        print_info("JPA non détecté — repository généré sans JpaRepository")
+        
+    if pom_features.has_lombok:
+        print_info("Lombok détecté ✔")
+    else:
+        print_info("Lombok non détecté — getters/setters générés manuellement")
+        
+    if pom_features.has_swagger:
+        print_info("Swagger détecté ✔")
+    else:
+        print_info("Swagger non détecté — SwaggerConfig ignoré")
+        
+    if pom_features.has_validation:
+        print_info("Validation détectée ✔")
+    else:
+        print_info("Validation non détectée — annotations @Valid ignorées")
+
     # ── Wizard interactif ────────────────────────────────────────────────────
-    config = run_wizard()
+    config = run_wizard(pom_features)
 
     if not config.entities:
         print_error("Aucune entité définie. Abandon.")
@@ -58,7 +82,7 @@ def start_command():
 
     # ── Génération ───────────────────────────────────────────────────────────
     print_info("Génération des fichiers en cours…")
-    generated = generate_all(config)
+    generated = generate_all(config, base_path)
 
     # ── Écriture sur le disque ───────────────────────────────────────────────
     file_count = write_all(generated, base_path)

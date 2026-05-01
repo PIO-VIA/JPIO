@@ -1,7 +1,9 @@
 package {{ base_package }}.models.entity;
 
 import jakarta.persistence.*;
+{% if pom_features.has_lombok %}
 import lombok.*;
+{% endif %}
 {% for import in extra_imports %}
 import {{ import }};
 {% endfor %}
@@ -17,10 +19,12 @@ import java.util.List;
 
 @Entity
 @Table(name = "{{ entity_name | lower }}s")
+{% if pom_features.has_lombok %}
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+{% endif %}
 public class {{ entity_name }} {
 
     @Id
@@ -62,4 +66,43 @@ public class {{ entity_name }} {
 
     {% endif %}
 {% endfor %}
+{% if not pom_features.has_lombok %}
+    // ── Constructeurs ────────────────────────────────────────────────────────
+
+    public {{ entity_name }}() {}
+
+    public {{ entity_name }}(Long id, {% for field in fields %}{{ field.java_type }} {{ field.name }}{% if not loop.last or relations %}, {% endif %}{% endfor %}{% for relation in relations %}{% if relation.kind in ("OneToMany", "ManyToMany") %}List<{{ relation.target }}> {{ relation.field_name }}{% else %}{{ relation.target }} {{ relation.target_lower }}{% endif %}{% if not loop.last %}, {% endif %}{% endfor %}) {
+        this.id = id;
+{% for field in fields %}
+        this.{{ field.name }} = {{ field.name }};
+{% endfor %}
+{% for relation in relations %}
+    {% if relation.kind in ("OneToMany", "ManyToMany") %}
+        this.{{ relation.field_name }} = {{ relation.field_name }};
+    {% else %}
+        this.{{ relation.target_lower }} = {{ relation.target_lower }};
+    {% endif %}
+{% endfor %}
+    }
+
+    // ── Getters & Setters ────────────────────────────────────────────────────
+
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+
+{% for field in fields %}
+    public {{ field.java_type }} get{{ field.capitalized }}() { return {{ field.name }}; }
+    public void set{{ field.capitalized }}({{ field.java_type }} {{ field.name }}) { this.{{ field.name }} = {{ field.name }}; }
+{% endfor %}
+
+{% for relation in relations %}
+    {% if relation.kind in ("OneToMany", "ManyToMany") %}
+    public List<{{ relation.target }}> get{{ relation.field_name | capitalize }}() { return {{ relation.field_name }}; }
+    public void set{{ relation.field_name | capitalize }}(List<{{ relation.target }}> {{ relation.field_name }}) { this.{{ relation.field_name }} = {{ relation.field_name }}; }
+    {% else %}
+    public {{ relation.target }} get{{ relation.target }}() { return {{ relation.target_lower }}; }
+    public void set{{ relation.target }}({{ relation.target }} {{ relation.target_lower }}) { this.{{ relation.target_lower }} = {{ relation.target_lower }}; }
+    {% endif %}
+{% endfor %}
+{% endif %}
 }
