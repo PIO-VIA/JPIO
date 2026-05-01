@@ -19,15 +19,22 @@ console = Console()
 # ---------------------------------------------------------------------------
 
 def print_banner() -> None:
-    """Affiche la bannière JPIO au lancement."""
-    banner = Text()
-    banner.append("  🔧 JPIO", style="bold cyan")
-    banner.append(" — Java Project Input/Output\n", style="bold white")
-    banner.append("  Spring Boot Scaffolding CLI", style="dim white")
+    """Affiche la bannière JPIO au lancement avec de l'ASCII art."""
+    ascii_art = """
+      _ ____ ___ ___  
+     | |  _ \\_ _/ _ \\ 
+  _  | | |_) | | | | |
+ | |_| |  __/| | |_| |
+  \\___/|_|  |___\\___/ 
+"""
+    
+    banner = Text(ascii_art, justify="center", style="bold cyan")
+    banner.append("\n — Java Project Input/Output\n", style="bold white")
+    banner.append(" Spring Boot Scaffolding CLI", style="dim white")
     banner.append("  •  v0.1.0", style="dim cyan")
 
     console.print(
-        Panel(banner, border_style="cyan", padding=(1, 4), box=box.DOUBLE)
+        Panel(banner, border_style="cyan", padding=(1, 2), box=box.DOUBLE)
     )
     console.print()
 

@@ -50,6 +50,6 @@ include = ["jpio*"]
 jpio = ["templates/**/*.j2"]
 
 [project.urls]
-Homepage = "https://github.com/yourname/jpio"
-Repository = "https://github.com/yourname/jpio"
-Issues = "https://github.com/yourname/jpio/issues"
+Homepage = "https://github.com/PIO-VIA/JPIO"
+Repository = "https://github.com/PIO-VIA/JPIO"
+Issues = "https://github.com/PIO-VIA/JPIO/issues"
