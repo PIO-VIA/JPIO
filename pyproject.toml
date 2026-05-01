@@ -1,0 +1,55 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name = "jpio"
+version = "0.1.0"
+description = "Java Project Input/Output — Spring Boot scaffolding CLI"
+readme = "README.md"
+license = { text = "MIT" }
+authors = [
+  { name = "PIO", email = "piodjiele@gmail.com" }
+]
+keywords = ["spring-boot", "java", "scaffolding", "cli", "code-generator"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Environment :: Console",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Software Development :: Code Generators",
+]
+requires-python = ">=3.9"
+
+dependencies = [
+  "click>=8.1",          # CLI framework — commands, options, arguments
+  "questionary>=2.0",    # Interactive prompts — select, checkbox, text, confirm
+  "rich>=13.0",          # Terminal UX — colors, tables, spinners, panels
+  "jinja2>=3.1",         # Java code generation via templates
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=7.0",
+  "pytest-cov>=4.0",
+]
+
+[project.scripts]
+jpio = "jpio.main:cli"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["jpio*"]
+
+[tool.setuptools.package-data]
+jpio = ["templates/**/*.j2"]
+
+[project.urls]
+Homepage = "https://github.com/yourname/jpio"
+Repository = "https://github.com/yourname/jpio"
+Issues = "https://github.com/yourname/jpio/issues"
