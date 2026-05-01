@@ -25,7 +25,7 @@ def _make_env() -> Environment:
     ce qui fonctionne aussi bien en développement qu'après pip install.
     """
     return Environment(
-        loader=select_autoescape(
+        autoescape=select_autoescape(
             enabled_extensions=("j2",),
             default_for_string=True,
         ),
