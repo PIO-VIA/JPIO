@@ -1,0 +1,106 @@
+package {{ base_package }}.models.entity;
+
+import {{ base_package }}.models.enum.Role;
+import jakarta.persistence.*;
+{% if pom_features.has_lombok %}
+import lombok.*;
+{% endif %}
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
+
+import java.util.Collection;
+import java.util.List;
+
+@Entity
+@Table(name = "_users")
+{% if pom_features.has_lombok %}
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+{% endif %}
+public class User implements UserDetails {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(unique = true, nullable = false)
+    private String {{ security_config.username_field }};
+
+    @Column(nullable = false)
+    private String password;
+
+    @Enumerated(EnumType.STRING)
+    private Role role;
+
+{% for field in security_config.extra_user_fields %}
+    private {{ field.java_type }} {{ field.name }};
+{% endfor %}
+
+    @Override
+    public Collection<? extends GrantedAuthority> getAuthorities() {
+        return List.of(new SimpleGrantedAuthority(role.name()));
+    }
+
+    @Override
+    public String getPassword() {
+        return password;
+    }
+
+    @Override
+    public String getUsername() {
+        return {{ security_config.username_field }};
+    }
+
+    @Override
+    public boolean isAccountNonExpired() {
+        return true;
+    }
+
+    @Override
+    public boolean isAccountNonLocked() {
+        return true;
+    }
+
+    @Override
+    public boolean isCredentialsNonExpired() {
+        return true;
+    }
+
+    @Override
+    public boolean isEnabled() {
+        return true;
+    }
+
+{% if not pom_features.has_lombok %}
+    public User() {}
+
+    public User(Long id, String {{ security_config.username_field }}, String password, Role role{% for field in security_config.extra_user_fields %}, {{ field.java_type }} {{ field.name }}{% endfor %}) {
+        this.id = id;
+        this.{{ security_config.username_field }} = {{ security_config.username_field }};
+        this.password = password;
+        this.role = role;
+{% for field in security_config.extra_user_fields %}
+        this.{{ field.name }} = {{ field.name }};
+{% endfor %}
+    }
+
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+
+    public String get{{ username_field_capitalized }}() { return {{ security_config.username_field }}; }
+    public void set{{ username_field_capitalized }}(String {{ security_config.username_field }}) { this.{{ security_config.username_field }} = {{ security_config.username_field }}; }
+
+    public void setPassword(String password) { this.password = password; }
+
+    public Role getRole() { return role; }
+    public void setRole(Role role) { this.role = role; }
+
+{% for field in security_config.extra_user_fields %}
+    public {{ field.java_type }} get{{ field.capitalized }}() { return {{ field.name }}; }
+    public void set{{ field.capitalized }}({{ field.java_type }} {{ field.name }}) { this.{{ field.name }} = {{ field.name }}; }
+{% endfor %}
+{% endif %}
+}

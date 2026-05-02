@@ -64,26 +64,27 @@ pip install jpio-cli
 ## Quick Start
 
 ```bash
-# Create a new Spring Boot project
-jpio new
+# Go to your Spring Boot project root
+cd my-spring-project
+
+# Launch the JPIO wizard
+jpio start
 
 # Follow the interactive prompts:
-# ? Project name     : ecommerce-api
-# ? Base package     : com.yourname.ecommerce
-# ? Database         : MySQL
+# ? API route prefix     : /api/v1
 #
 # --- Entity 1 ---
-# ? Entity name      : Product
-# ? Fields           : name (String), price (Double), stock (Integer)
-# ? Has relations?   : Yes → ManyToMany → Category
+# ? Entity name          : Product
+# ? Fields               : name (String), price (Double), stock (Integer)
+# ? Has relations?       : Yes → ManyToMany → Category
 #
 # --- Entity 2 ---
-# ? Entity name      : Category
-# ? Fields           : name (String)
+# ? Entity name          : Category
+# ? Fields               : name (String)
 #
 # ? Add another entity? No
 #
-# ✅ Project generated in ./ecommerce-api/
+# ✅ Business layers generated!
 ```
 
 ---
@@ -92,172 +93,106 @@ jpio new
 
 | Command | Description |
 |---|---|
-| `jpio new` | Create a new Spring Boot project interactively |
+| `jpio start` | Initialize and scaffold business layers for a project |
 | `jpio add` | Add a new entity to an existing JPIO project |
+| `jpio security` | Add a complete Spring Security JWT layer |
 | `jpio scan` | Display the current state of a JPIO project |
 
-### `jpio new`
-Launches the full interactive wizard. Asks for project metadata (name, package, database), then collects entities and their fields and relations. Generates the complete project structure.
+### `jpio start`
+Launches the full interactive wizard. Detects your existing package structure, `pom.xml` dependencies, and configuration format (`properties` vs `yaml`). Generates the complete CRUD structure for your entities.
 
 ### `jpio add`
-Run inside an existing JPIO project. Prompts for a new entity and appends the generated files without touching existing code. Reads `.jpio.json` to stay aware of existing entities.
+Run inside an existing JPIO project. Prompts for a new entity and appends the generated files without touching existing code. Reads `.jpio.json` to stay aware of existing entities and relationships.
+
+### `jpio security`
+Adds a complete **Spring Security + JWT** implementation to your project.
+- Generates `SecurityConfig`, `JwtUtil`, `JwtAuthenticationFilter`, and `UserDetailsServiceImpl`.
+- Generates authentication endpoints (`/auth/login`, `/auth/register`) and DTOs.
+- Automatically creates a `User` entity and `Role` enum if not already present.
+- Injects required dependencies into your `pom.xml`.
 
 ### `jpio scan`
-Reads `.jpio.json` and displays a summary table of the project: entities, fields, relations, and generated files.
+Reads `.jpio.json` and displays a summary table of the project: entities, fields, and relations.
 
 ---
 
 ## Project Architecture
-
-This section describes the internal architecture of JPIO itself (the CLI tool).
 
 ```
 jpio/
 ├── jpio/
 │   ├── main.py                        # CLI entry point (Click)
 │   ├── commands/
-│   │   ├── new.py                     # `jpio new` — full project wizard
-│   │   ├── add_entity.py              # `jpio add` — add entity to existing project
+│   │   ├── new.py                     # `jpio start` — full project wizard
+│   │   ├── add.py                     # `jpio add` — add entity
+│   │   ├── security.py                # `jpio security` — security flow
 │   │   └── scan.py                    # `jpio scan` — display project state
 │   ├── core/
 │   │   ├── models.py                  # Dataclasses: Field, Relation, Entity, ProjectConfig
 │   │   ├── analyzer.py                # Interactive prompts → builds ProjectConfig
-│   │   ├── generator.py               # ProjectConfig → Jinja2 render → Java code strings
+│   │   ├── security_analyzer.py       # Security wizard
+│   │   ├── generator.py               # Jinja2 rendering engine
+│   │   ├── security_generator.py      # Security file generation
 │   │   └── writer.py                  # Java code strings → files on disk
 │   ├── utils/
-│   │   ├── console.py                 # Rich: colors, spinners, tables, success/error output
-│   │   └── file_helper.py             # Path manipulation, mkdir, safe file operations
+│   │   ├── console.py                 # Rich: banners, tables, success/error output
+│   │   └── file_helper.py             # Path manipulation, pom.xml dependency injection
 │   └── templates/
-│       ├── entity/
-│       │   ├── entity.java.j2                  # JPA Entity class
-│       │   ├── dto.java.j2                     # Data Transfer Object
-│       │   ├── mapper.java.j2                  # DTO <-> Entity mapper
-│       │   ├── repository.java.j2              # Spring Data JPA repository
-│       │   ├── service.java.j2                 # Service interface
-│       │   ├── service_impl.java.j2            # Service implementation
-│       │   ├── controller.java.j2              # REST controller (CRUD)
-│       │   └── not_found_exception.java.j2     # EntityNotFoundException
-│       ├── exception/
-│       │   └── global_exception_handler.java.j2  # @ControllerAdvice handler
-│       ├── config/
-│       │   └── swagger_config.java.j2          # SpringDoc OpenAPI config
-│       └── project/
-│           ├── pom.xml.j2                      # Maven dependencies
-│           └── application.properties.j2       # Spring Boot config
+│       ├── entity/                    # CRUD templates
+│       ├── exception/                 # Global exception handling templates
+│       ├── config/                    # Swagger/SpringDoc templates
+│       ├── security/                  # Spring Security JWT templates
+│       └── project/                   # application.properties/yaml templates
 ├── tests/
 │   ├── test_analyzer.py
 │   ├── test_generator.py
+│   ├── test_security_generator.py
 │   └── test_writer.py
 ├── pyproject.toml
-├── README.md
-└── .jpio.json                         # Project snapshot (entities, relations, config)
-```
-
-### Data Flow
-
-```
-jpio new
-   │
-   ▼
-analyzer.py       ← interactive prompts (questionary)
-   │ returns ProjectConfig
-   ▼
-generator.py      ← Jinja2 renders templates
-   │ returns { filepath: java_code_string }
-   ▼
-writer.py         ← creates directories and files on disk
-   │
-   ▼
-console.py        ← prints success report
-   │
-   ▼
-.jpio.json        ← saves project snapshot for future `add` and `scan`
-```
-
-### Core Models (`core/models.py`)
-
-```python
-@dataclass
-class Field:
-    name: str          # e.g. "price"
-    type: str          # e.g. "Double"
-    nullable: bool
-
-@dataclass
-class Relation:
-    kind: str          # "OneToMany" | "ManyToMany" | "ManyToOne"
-    target: str        # e.g. "Category"
-    mapped_by: str     # owning side field name
-
-@dataclass
-class Entity:
-    name: str          # e.g. "Product"
-    fields: list[Field]
-    relations: list[Relation]
-
-@dataclass
-class Enum:
-    name: str          # e.g. "Role"
-    values: list[str]  # e.g. ["USER", "ADMIN"]
-
-@dataclass
-class ProjectConfig:
-    project_name: str
-    base_package: str
-    database: str
-    entities: list[Entity]
-    enums: list[Enum]
+└── README.md
 ```
 
 ---
 
 ## Generated Structure
 
-For a project `ecommerce-api` with package `com.pio.ecommerce` and two entities `Product` and `Category`:
+For a project with package `com.pio.ecommerce` and two entities `Product` and `Category`:
 
 ```
-ecommerce-api/
-├── pom.xml
-└── src/
-    └── main/
-        ├── java/
-        │   └── com/pio/ecommerce/
-        │       ├── EcommerceApiApplication.java
-        │       ├── config/
-        │       │   └── SwaggerConfig.java
-        │       ├── controller/
-        │       │   ├── ProductController.java
-        │       │   └── CategoryController.java
-        │       ├── dto/
-        │       │   ├── request/
-        │       │   │   ├── ProductRequestDTO.java
-        │       │   │   └── CategoryRequestDTO.java
-        │       │   └── response/
-        │       │       ├── ProductResponseDTO.java
-        │       │       └── CategoryResponseDTO.java
-        │       ├── exception/
-        │       │   ├── GlobalExceptionHandler.java
-        │       │   ├── ProductNotFoundException.java
-        │       │   └── CategoryNotFoundException.java
-        │       ├── mapper/
-        │       │   ├── ProductMapper.java
-        │       │   └── CategoryMapper.java
-        │       ├── models/
-        │       │   ├── entity/
-        │       │   │   ├── Product.java
-        │       │   │   └── Category.java
-        │       │   └── enum/
-        │       │       └── Role.java
-        │       ├── repository/
-        │       │   ├── ProductRepository.java
-        │       │   └── CategoryRepository.java
-        │       └── service/
-        │           ├── ProductService.java
-        │           ├── ProductServiceImpl.java
-        │           ├── CategoryService.java
-        │           └── CategoryServiceImpl.java
-        └── resources/
-            └── application.properties
+src/main/java/com/pio/ecommerce/
+├── config/
+│   ├── SecurityConfig.java            # (If security added)
+│   └── SwaggerConfig.java
+├── controller/
+│   ├── AuthController.java            # (If security added)
+│   ├── ProductController.java
+│   └── CategoryController.java
+├── dto/
+│   ├── request/
+│   │   ├── LoginRequestDTO.java
+│   │   ├── ProductRequestDTO.java
+│   │   └── CategoryRequestDTO.java
+│   └── response/
+│       ├── AuthResponseDTO.java
+│       ├── ProductResponseDTO.java
+│       └── CategoryResponseDTO.java
+├── security/                          # JWT Logic (If security added)
+│   ├── JwtUtil.java
+│   └── JwtAuthenticationFilter.java
+├── models/
+│   ├── entity/
+│   │   ├── User.java                  # (If security added)
+│   │   ├── Product.java
+│   │   └── Category.java
+│   └── enum/
+│       └── Role.java
+├── repository/
+│   ├── UserRepository.java
+│   ├── ProductRepository.java
+│   └── CategoryRepository.java
+└── service/
+    ├── ProductService.java
+    └── ProductServiceImpl.java
 ```
 
 ---
@@ -270,10 +205,10 @@ ecommerce-api/
 | `ManyToOne` | Many entities belong to one | `OrderItem` → `Order` |
 | `ManyToMany` | Both sides have many | `Product` ↔ `Category` |
 
-Relations are declared interactively. JPIO automatically handles:
+JPIO automatically handles:
 - The `@JoinTable` annotation for `ManyToMany`
 - The `mappedBy` attribute on the inverse side
-- The correct field type (`List<TargetEntity>`)
+- Pluralization and correct field types (`List<Target>`)
 
 ---
 
@@ -283,11 +218,11 @@ Relations are declared interactively. JPIO automatically handles:
 - [x] OneToMany / ManyToMany relation support
 - [x] `jpio add` command for existing projects
 - [x] `jpio scan` project inspector
-- [x] Enums support & Request/Response DTO separation (v0.2.0)
+- [x] Enums support & Request/Response DTO separation
+- [x] Spring Security scaffolding (v0.5.0)
 - [ ] `jpio add enum` command for existing projects
 - [ ] IntelliJ IDEA plugin
 - [ ] VS Code extension
-- [ ] Spring Security scaffolding (optional layer)
 - [ ] Lombok support toggle
 - [ ] MapStruct vs manual mapper toggle
 
@@ -295,7 +230,7 @@ Relations are declared interactively. JPIO automatically handles:
 
 ## Contributing
 
-Contributions are welcome. Please open an issue before submitting a pull request to discuss the proposed change.
+Contributions are welcome. Please open an issue before submitting a pull request.
 
 ```bash
 git clone https://github.com/PIO-VIA/JPIO.git

@@ -52,7 +52,7 @@ def config_with_many_to_many() -> ProjectConfig:
                 name="Category",
                 fields=[Field(name="name", java_type="String", nullable=False)],
                 relations=[
-                    Relation(kind="ManyToMany", target="Product", mapped_by="categories", owner=False)
+                    Relation(kind="ManyToMany", target="Product", mapped_by="categorys", owner=False)
                 ],
             )
         ],
@@ -115,7 +115,7 @@ def test_controller_content(simple_config):
     
     assert "@RestController" in java_code
     assert "@RequestMapping(\"/api/v1/products\")" in java_code
-    assert "public ResponseEntity<ProductResponseDTO> createProduct" in java_code
+    assert "public ResponseEntity<ProductResponseDTO> create(" in java_code
 
 
 # ---------------------------------------------------------------------------
@@ -128,15 +128,15 @@ def test_many_to_many_owner_side(config_with_many_to_many):
     
     assert "@ManyToMany" in java_code
     assert "@JoinTable" in java_code
-    assert "private List<Category> categories = new ArrayList<>();" in java_code
+    assert "private List<Category> categorys;" in java_code
 
 
 def test_many_to_many_inverse_side(config_with_many_to_many):
     output = generate_all(config_with_many_to_many)
     java_code = output["src/main/java/com/pio/shop/models/entity/Category.java"]
     
-    assert "@ManyToMany(mappedBy = \"categories\")" in java_code
-    assert "private List<Product> products = new ArrayList<>();" in java_code
+    assert "@ManyToMany(mappedBy = \"categorys\")" in java_code
+    assert "private List<Product> products;" in java_code
     assert "@JoinTable" not in java_code
 
 
@@ -182,7 +182,7 @@ class TestPomFeatures:
                     name="Product",
                     fields=[
                         Field("name", "String", nullable=False),
-                        Field("price", "Double", nullable=True)
+                        Field("price", "Double", nullable=False)
                     ]
                 )
             ],

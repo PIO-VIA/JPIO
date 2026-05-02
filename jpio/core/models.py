@@ -272,6 +272,39 @@ class Entity:
 
 
 @dataclass
+class SecurityConfig:
+    """Security configuration collected by the security wizard."""
+    username_field: str
+    jwt_secret: str
+    jwt_expiration_hours: int
+    public_routes: list[str] = field(default_factory=list)
+    existing_user_entity: str = ""
+    extra_user_fields: list[Field] = field(default_factory=list)
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "SecurityConfig":
+        extra_fields = [Field.from_dict(f) for f in data.get("extra_user_fields", [])]
+        return cls(
+            username_field=data["username_field"],
+            jwt_secret=data["jwt_secret"],
+            jwt_expiration_hours=data["jwt_expiration_hours"],
+            public_routes=data.get("public_routes", []),
+            existing_user_entity=data.get("existing_user_entity", ""),
+            extra_user_fields=extra_fields
+        )
+
+    def to_dict(self) -> dict:
+        return {
+            "username_field": self.username_field,
+            "jwt_secret": self.jwt_secret,
+            "jwt_expiration_hours": self.jwt_expiration_hours,
+            "public_routes": self.public_routes,
+            "existing_user_entity": self.existing_user_entity,
+            "extra_user_fields": [f.to_dict() for f in self.extra_user_fields]
+        }
+
+
+@dataclass
 class ProjectConfig:
     """
     Global project configuration — produced by analyzer.py,
@@ -288,6 +321,7 @@ class ProjectConfig:
     enums: list[Enum] = field(default_factory=list)
     pom_features: PomFeatures = field(default_factory=PomFeatures)
     folder_mapping: FolderMapping = field(default_factory=FolderMapping)
+    security: Optional[SecurityConfig] = None
 
     @property
     def package_path(self) -> str:
@@ -303,13 +337,19 @@ class ProjectConfig:
         enums = [Enum.from_dict(e) for e in data.get("enums", [])]
         pom_features = PomFeatures.from_dict(data.get("pom_features", {}))
         folder_mapping = FolderMapping.from_dict(data.get("folder_mapping", {}))
+        
+        security = None
+        if "security" in data and data["security"]:
+            security = SecurityConfig.from_dict(data["security"])
+            
         return cls(
             base_package=data["base_package"],
             api_prefix=data.get("api_prefix", "/api/v1"),
             entities=entities,
             enums=enums,
             pom_features=pom_features,
-            folder_mapping=folder_mapping
+            folder_mapping=folder_mapping,
+            security=security
         )
 
     def to_dict(self) -> dict:
@@ -319,5 +359,6 @@ class ProjectConfig:
             "entities": [e.to_dict() for e in self.entities],
             "enums": [e.to_dict() for e in self.enums],
             "pom_features": self.pom_features.to_dict(),
-            "folder_mapping": self.folder_mapping.to_dict()
+            "folder_mapping": self.folder_mapping.to_dict(),
+            "security": self.security.to_dict() if self.security else None
         }

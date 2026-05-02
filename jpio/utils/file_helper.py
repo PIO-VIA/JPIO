@@ -1,5 +1,4 @@
 """
-
 File system operations.
 All path and file manipulations go through here.
 """
@@ -164,6 +163,61 @@ def analyze_pom(path: Path = Path(".")) -> PomFeatures:
     except Exception as e:
         logger.warning(f"Error reading pom.xml: {e}. Using default values.")
         return PomFeatures()
+
+
+def inject_security_dependencies(path: Path = Path(".")) -> bool:
+    """
+    Adds Spring Security and JJWT dependencies to pom.xml.
+
+    Strategy:
+    - Read pom.xml content
+    - Verify that spring-boot-starter-security is not already present
+    - Find the last </dependency> occurrence followed by </dependencies>
+    - Insert the block before </dependencies>
+    - Rewrite the file
+
+    Returns True if injection succeeded, False if already present or error.
+    """
+    pom_path = path / "pom.xml"
+    if not pom_path.exists():
+        return False
+
+    content = pom_path.read_text(encoding="utf-8")
+
+    if "spring-boot-starter-security" in content:
+        return False
+
+    security_deps = """
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-api</artifactId>
+            <version>0.11.5</version>
+        </dependency>
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-impl</artifactId>
+            <version>0.11.5</version>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-jackson</artifactId>
+            <version>0.11.5</version>
+            <scope>runtime</scope>
+        </dependency>
+"""
+    
+    if "</dependencies>" in content:
+        # Insert before the last </dependencies>
+        new_content = content.replace("</dependencies>", f"{security_deps}    </dependencies>", 1)
+        pom_path.write_text(new_content, encoding="utf-8")
+        return True
+
+    return False
 
 
 # ---------------------------------------------------------------------------

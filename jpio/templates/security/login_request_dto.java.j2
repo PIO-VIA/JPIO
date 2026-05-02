@@ -1,0 +1,32 @@
+package {{ base_package }}.dto.request;
+
+{% if pom_features.has_lombok %}
+import lombok.*;
+{% endif %}
+
+{% if pom_features.has_lombok %}
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+{% endif %}
+public class LoginRequestDTO {
+
+    private String {{ security_config.username_field }};
+    private String password;
+
+{% if not pom_features.has_lombok %}
+    public LoginRequestDTO() {}
+
+    public LoginRequestDTO(String {{ security_config.username_field }}, String password) {
+        this.{{ security_config.username_field }} = {{ security_config.username_field }};
+        this.password = password;
+    }
+
+    public String get{{ username_field_capitalized }}() { return {{ security_config.username_field }}; }
+    public void set{{ username_field_capitalized }}(String {{ security_config.username_field }}) { this.{{ security_config.username_field }} = {{ security_config.username_field }}; }
+
+    public String getPassword() { return password; }
+    public void setPassword(String password) { this.password = password; }
+{% endif %}
+}

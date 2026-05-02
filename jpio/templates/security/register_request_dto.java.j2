@@ -1,0 +1,44 @@
+package {{ base_package }}.dto.request;
+
+{% if pom_features.has_lombok %}
+import lombok.*;
+{% endif %}
+
+{% if pom_features.has_lombok %}
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+{% endif %}
+public class RegisterRequestDTO {
+
+    private String {{ security_config.username_field }};
+    private String password;
+
+{% for field in security_config.extra_user_fields %}
+    private {{ field.java_type }} {{ field.name }};
+{% endfor %}
+
+{% if not pom_features.has_lombok %}
+    public RegisterRequestDTO() {}
+
+    public RegisterRequestDTO(String {{ security_config.username_field }}, String password{% for field in security_config.extra_user_fields %}, {{ field.java_type }} {{ field.name }}{% endfor %}) {
+        this.{{ security_config.username_field }} = {{ security_config.username_field }};
+        this.password = password;
+{% for field in security_config.extra_user_fields %}
+        this.{{ field.name }} = {{ field.name }};
+{% endfor %}
+    }
+
+    public String get{{ username_field_capitalized }}() { return {{ security_config.username_field }}; }
+    public void set{{ username_field_capitalized }}(String {{ security_config.username_field }}) { this.{{ security_config.username_field }} = {{ security_config.username_field }}; }
+
+    public String getPassword() { return password; }
+    public void setPassword(String password) { this.password = password; }
+
+{% for field in security_config.extra_user_fields %}
+    public {{ field.java_type }} get{{ field.capitalized }}() { return {{ field.name }}; }
+    public void set{{ field.capitalized }}({{ field.java_type }} {{ field.name }}) { this.{{ field.name }} = {{ field.name }}; }
+{% endfor %}
+{% endif %}
+}

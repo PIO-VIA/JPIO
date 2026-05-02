@@ -29,7 +29,7 @@ def print_banner() -> None:
     banner = Text(ascii_art, justify="center", style="bold cyan")
     banner.append("\n — Java Project Input/Output\n", style="bold white")
     banner.append(" Spring Boot Scaffolding CLI", style="dim white")
-    banner.append("  •  v0.4.0", style="dim cyan")
+    banner.append("  •  v0.5.0", style="dim cyan")
 
     console.print(
         Panel(banner, border_style="cyan", padding=(1, 2), box=box.DOUBLE)
@@ -160,5 +160,37 @@ def print_scan_table(entities: list[dict]) -> None:
         table.add_row(entity["name"], fields_str, relations_str)
 
     console.print()
+    console.print(table)
+    console.print()
+
+
+# ---------------------------------------------------------------------------
+# Security Plan
+# ---------------------------------------------------------------------------
+
+def print_security_plan(security_config) -> None:
+    """
+    Displays a summary of the security configuration before generation.
+    """
+    table = Table(
+        title="[bold cyan]JPIO — Security Implementation Plan[/bold cyan]",
+        box=box.ROUNDED,
+        border_style="cyan",
+        header_style="bold white",
+    )
+
+    table.add_column("Setting", style="dim white")
+    table.add_column("Value",   style="bold cyan")
+
+    table.add_row("Username Field", security_config.username_field)
+    table.add_row("JWT Secret",     security_config.jwt_secret[:8] + "...")
+    table.add_row("JWT Expiration", f"{security_config.jwt_expiration_hours} hours")
+    
+    user_type = f"Existing ({security_config.existing_user_entity})" if security_config.existing_user_entity else "New (generated User.java)"
+    table.add_row("User Entity",    user_type)
+
+    routes = ", ".join(security_config.public_routes) if security_config.public_routes else "none"
+    table.add_row("Public Routes",  routes)
+
     console.print(table)
     console.print()
