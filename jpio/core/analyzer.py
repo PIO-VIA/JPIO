@@ -48,10 +48,10 @@ QSTYLE = questionary.Style([
 # ---------------------------------------------------------------------------
 
 def run_wizard(pom_features: PomFeatures = None, folder_mapping: FolderMapping = None) -> ProjectConfig:
-    """
+    \"\"\"
     Runs the complete questionnaire and returns a ProjectConfig.
     Entry point called by commands/new.py
-    """
+    \"\"\"
     if pom_features is None:
         pom_features = PomFeatures()
     
@@ -95,21 +95,52 @@ def run_wizard(pom_features: PomFeatures = None, folder_mapping: FolderMapping =
 
     # ── Entity Collection ─────────────────────────────────────────────────
     entities: list[Entity] = []
+    entity_names: set[str] = set()
+    referenced_names: list[str] = []
+    
     entity_number = 1
 
     while True:
         print_section(f"Entity {entity_number}")
-        entity = _collect_entity(entity_number, [e.name for e in entities], enums)
+        
+        # If we have referenced names, suggest the first one
+        default_name = referenced_names[0] if referenced_names else None
+        
+        entity = _collect_entity(
+            entity_number, 
+            list(entity_names), 
+            enums, 
+            suggested_name=default_name
+        )
 
         if entity:
             entities.append(entity)
+            entity_names.add(entity.name)
+            
+            # Remove from referenced if it was there
+            if entity.name in referenced_names:
+                referenced_names.remove(entity.name)
+                
+            # Add new references
+            for rel in entity.relations:
+                if rel.target not in entity_names and rel.target not in referenced_names:
+                    referenced_names.append(rel.target)
+                    
             print_success(f"Entity [bold]{entity.name}[/bold] added.")
 
-        add_another = questionary.confirm(
-            "Add another entity?",
-            default=True,
-            style=QSTYLE,
-        ).ask()
+        if referenced_names:
+            print_info(f"Entities referenced but not yet defined: [bold cyan]{', '.join(referenced_names)}[/bold cyan]")
+            add_another = questionary.confirm(
+                f"Would you like to define {referenced_names[0]} now?",
+                default=True,
+                style=QSTYLE,
+            ).ask()
+        else:
+            add_another = questionary.confirm(
+                "Add another entity?",
+                default=True,
+                style=QSTYLE,
+            ).ask()
 
         if not add_another:
             break
@@ -126,27 +157,69 @@ def run_wizard(pom_features: PomFeatures = None, folder_mapping: FolderMapping =
     )
 
 
-def run_add_wizard(existing_entity_names: list[str], existing_enums: list[Enum] = None) -> Entity | None:
-    """
-    Runs the questionnaire to add a single entity.
-    """
-    print_section("New Entity")
-    entity = _collect_entity(len(existing_entity_names) + 1, existing_entity_names, existing_enums)
-    if entity:
-        print_success(f"Entity [bold]{entity.name}[/bold] configured.")
-    return entity
+def run_add_wizard(existing_entity_names: list[str], existing_enums: list[Enum] = None) -> list[Entity]:
+    \"\"\"
+    Runs the questionnaire to add entities.
+    Returns a list of entities configured.
+    \"\"\"
+    print_section("New Entities")
+    entities: list[Entity] = []
+    entity_names = set(existing_entity_names)
+    referenced_names: list[str] = []
+    
+    entity_number = len(existing_entity_names) + 1
+
+    while True:
+        default_name = referenced_names[0] if referenced_names else None
+        entity = _collect_entity(entity_number, list(entity_names), existing_enums, suggested_name=default_name)
+        
+        if entity:
+            entities.append(entity)
+            entity_names.add(entity.name)
+            if entity.name in referenced_names:
+                referenced_names.remove(entity.name)
+            for rel in entity.relations:
+                if rel.target not in entity_names and rel.target not in referenced_names:
+                    referenced_names.append(rel.target)
+            print_success(f"Entity [bold]{entity.name}[/bold] configured.")
+
+        if referenced_names:
+            print_info(f"Entities referenced but not yet defined: [bold cyan]{', '.join(referenced_names)}[/bold cyan]")
+            add_another = questionary.confirm(
+                f"Would you like to define {referenced_names[0]} now?",
+                default=True,
+                style=QSTYLE,
+            ).ask()
+        else:
+            add_another = questionary.confirm(
+                "Add another entity?",
+                default=False,
+                style=QSTYLE,
+            ).ask()
+
+        if not add_another:
+            break
+        entity_number += 1
+
+    return entities
 
 
 # ---------------------------------------------------------------------------
 # Entity Collection
 # ---------------------------------------------------------------------------
 
-def _collect_entity(number: int, existing_entity_names: list[str], enums: list[Enum] = None) -> Entity | None:
-    """Collects name, fields, and relations for an entity."""
+def _collect_entity(
+    number: int, 
+    existing_entity_names: list[str], 
+    enums: list[Enum] = None,
+    suggested_name: str = None
+) -> Entity | None:
+    \"\"\"Collects name, fields, and relations for an entity.\"\"\"
 
     # ── Name ─────────────────────────────────────────────────────────────────
     name = questionary.text(
         "Entity name (e.g., Product):",
+        default=suggested_name or "",
         validate=lambda v: (
             "Name cannot be empty." if not v.strip()
             else "This name already exists." if v.strip() in existing_entity_names
@@ -161,20 +234,42 @@ def _collect_entity(number: int, existing_entity_names: list[str], enums: list[E
     name = name.strip()
     name = name[0].upper() + name[1:]
 
-    # ── Fields ───────────────────────────────────────────────────────────────
-    print_info("Add entity fields (leave name empty to finish).")
-    fields = _collect_fields(enums)
-
-    # ── Relations ────────────────────────────────────────────────────────────
+    fields: list[Field] = []
     relations: list[Relation] = []
-    has_relations = questionary.confirm(
-        f"Does entity {name} have relations with other entities?",
-        default=False,
-        style=QSTYLE,
-    ).ask()
 
-    if has_relations:
-        relations = _collect_relations(name, existing_entity_names)
+    print_info(f"Configuring entity [bold cyan]{name}[/bold cyan]")
+
+    while True:
+        action = questionary.select(
+            f"What would you like to add to {name}?",
+            choices=[
+                "Add Field",
+                "Add Relation",
+                "Review & Finish",
+                "Cancel Entity"
+            ],
+            style=QSTYLE
+        ).ask()
+
+        if action == "Add Field":
+            new_fields = _collect_fields(enums, start_number=len(fields) + 1)
+            fields.extend(new_fields)
+        
+        elif action == "Add Relation":
+            new_relations = _collect_relations(name, existing_entity_names, start_number=len(relations) + 1)
+            relations.extend(new_relations)
+            
+        elif action == "Review & Finish":
+            if not fields and not relations:
+                print_warning(f"Entity {name} has no fields and no relations.")
+                if not questionary.confirm("Are you sure you want to save it as is?", default=False, style=QSTYLE).ask():
+                    continue
+            break
+            
+        elif action == "Cancel Entity":
+            if questionary.confirm(f"Discard entity {name}?", default=False, style=QSTYLE).ask():
+                return None
+            continue
 
     return Entity(name=name, fields=fields, relations=relations)
 
@@ -183,10 +278,10 @@ def _collect_entity(number: int, existing_entity_names: list[str], enums: list[E
 # Field Collection
 # ---------------------------------------------------------------------------
 
-def _collect_fields(enums: list[Enum] = None) -> list[Field]:
-    """Collects entity fields in a loop."""
+def _collect_fields(enums: list[Enum] = None, start_number: int = 1) -> list[Field]:
+    \"\"\"Collects entity fields in a loop.\"\"\"
     fields: list[Field] = []
-    field_number = 1
+    field_number = start_number
 
     while True:
         field_name = questionary.text(
@@ -269,10 +364,11 @@ def _collect_enums() -> list[Enum]:
 def _collect_relations(
     entity_name: str,
     existing_entity_names: list[str],
+    start_number: int = 1
 ) -> list[Relation]:
-    """Collects entity relations in a loop."""
+    \"\"\"Collects entity relations in a loop.\"\"\"
     relations: list[Relation] = []
-    relation_number = 1
+    relation_number = start_number
 
     while True:
         print_info(f"Relation {relation_number} for {entity_name}")

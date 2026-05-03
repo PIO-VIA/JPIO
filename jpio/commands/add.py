@@ -55,22 +55,22 @@ def add_command():
 
     existing_entity_names = [e.name for e in config.entities]
 
-    # ── Wizard for the new entity ───────────────────────────────────────
-    new_entity = run_add_wizard(existing_entity_names, config.enums)
+    # ── Wizard for the new entities ───────────────────────────────────────
+    new_entities = run_add_wizard(existing_entity_names, config.enums)
 
-    if not new_entity:
-        print_info("Addition cancelled. No entity created.")
+    if not new_entities:
+        print_info("Addition cancelled. No entities created.")
         raise SystemExit(0)
 
-    # ── Generation ───────────────────────────────────────────────────────────
-    print_info(f"Generating files for {new_entity.name}...")
-    generated = generate_single_entity(config, new_entity)
-
-    # ── Disk Writing ───────────────────────────────────────────────
-    file_count = write_all(generated, base_path)
+    # ── Generation and Writing ────────────────────────────────────────────────
+    file_count = 0
+    for entity in new_entities:
+        print_info(f"Generating files for {entity.name}...")
+        generated = generate_single_entity(config, entity)
+        file_count += write_all(generated, base_path)
+        config.entities.append(entity)
 
     # ── Update .jpio.json ────────────────────────────────────────────
-    config.entities.append(new_entity)
     jpio_file.write_text(json.dumps(config.to_dict(), indent=2, ensure_ascii=False))
     print_success(".jpio.json updated.")
 

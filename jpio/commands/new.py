@@ -60,7 +60,25 @@ def start_command():
     if pom_features.has_jpa:
         print_info("JPA detected ✔")
     else:
-        print_info("JPA not detected — repository generated without JpaRepository")
+        from jpio.core.analyzer import QSTYLE
+        from jpio.utils.file_helper import inject_jpa_dependency
+        import questionary
+
+        print_info("JPA not detected.")
+        add_jpa = questionary.confirm(
+            "Would you like to add JPA dependency to optimize repository writing?",
+            default=True,
+            style=QSTYLE,
+        ).ask()
+
+        if add_jpa:
+            if inject_jpa_dependency(base_path):
+                print_success("JPA dependency injected into pom.xml ✔")
+                pom_features.has_jpa = True
+            else:
+                print_error("Failed to inject JPA dependency. Using CrudRepository.")
+        else:
+            print_info("Proceeding without JPA — repositories will use CrudRepository.")
         
     if pom_features.has_lombok:
         print_info("Lombok detected ✔")
