@@ -362,3 +362,201 @@ class ProjectConfig:
             "folder_mapping": self.folder_mapping.to_dict(),
             "security": self.security.to_dict() if self.security else None
         }
+
+
+# ---------------------------------------------------------------------------
+# Java Parsing Results (from jpio-parser.jar)
+# ---------------------------------------------------------------------------
+
+@dataclass
+class JavaParameter:
+    name: str
+    type: str
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "JavaParameter":
+        return cls(name=data["name"], type=data["type"])
+
+
+@dataclass
+class JavaField:
+    name: str
+    type: str
+    type_simple: str
+    annotations: list[str]
+    is_final: bool = False
+    is_static: bool = False
+    visibility: str = "private"
+
+    @property
+    def is_injected(self) -> bool:
+        """True if the field is an injected dependency."""
+        return "Autowired" in self.annotations or self.is_final
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "JavaField":
+        return cls(
+            name=data["name"],
+            type=data["type"],
+            type_simple=data["typeSimple"],
+            annotations=data.get("annotations", []),
+            is_final=data.get("isFinal", False),
+            is_static=data.get("isStatic", False),
+            visibility=data.get("visibility", "private")
+        )
+
+
+@dataclass
+class JavaMethod:
+    name: str
+    return_type: str
+    return_type_simple: str
+    parameters: list[JavaParameter]
+    annotations: list[str]
+    throws_list: list[str]
+    is_public: bool
+    is_static: bool
+    is_override: bool
+    visibility: str
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "JavaMethod":
+        return cls(
+            name=data["name"],
+            return_type=data["returnType"],
+            return_type_simple=data["returnTypeSimple"],
+            parameters=[JavaParameter.from_dict(p) for p in data.get("parameters", [])],
+            annotations=data.get("annotations", []),
+            throws_list=data.get("throwsList", []),
+            is_public=data.get("isPublic", False),
+            is_static=data.get("isStatic", False),
+            is_override=data.get("isOverride", False),
+            visibility=data.get("visibility", "public")
+        )
+
+
+@dataclass
+class JavaClass:
+    name: str
+    qualified_name: str
+    package_name: str
+    class_type: str           # CLASS | INTERFACE | ENUM | RECORD
+    annotations: list[str]
+    implements_list: list[str]
+    extends_list: list[str]
+    imports: list[str]
+    fields: list[JavaField]
+    methods: list[JavaMethod]
+    is_abstract: bool
+    is_public: bool
+    file_path: str
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "JavaClass":
+        return cls(
+            name=data["name"],
+            qualified_name=data["qualifiedName"],
+            package_name=data["packageName"],
+            class_type=data["classType"],
+            annotations=data.get("annotations", []),
+            implements_list=data.get("implementsList", []),
+            extends_list=data.get("extendsList", []),
+            imports=data.get("imports", []),
+            fields=[JavaField.from_dict(f) for f in data.get("fields", [])],
+            methods=[JavaMethod.from_dict(m) for m in data.get("methods", [])],
+            is_abstract=data.get("isAbstract", False),
+            is_public=data.get("isPublic", True),
+            file_path=data["filePath"]
+        )
+
+
+@dataclass
+class ParseResult:
+    classes: list[JavaClass]
+    total_files: int
+    total_classes: int
+    errors: list[str]
+    parser_version: str
+    java_version: str
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "ParseResult":
+        return cls(
+            classes=[JavaClass.from_dict(c) for c in data.get("classes", [])],
+            total_files=data.get("totalFiles", 0),
+            total_classes=data.get("totalClasses", 0),
+            errors=data.get("errors", []),
+            parser_version=data.get("parserVersion", ""),
+            java_version=data.get("javaVersion", "")
+        )
+
+
+# ---------------------------------------------------------------------------
+# Test Planning
+# ---------------------------------------------------------------------------
+
+JAVA_TEST_VALUES: dict[str, str] = {
+    "String":        '"testValue"',
+    "Long":          "1L",
+    "Integer":       "42",
+    "Double":        "99.99",
+    "Float":         "9.9f",
+    "Boolean":       "true",
+    "BigDecimal":    'new BigDecimal("99.99")',
+    "LocalDate":     "LocalDate.of(2026, 5, 1)",
+    "LocalDateTime": "LocalDateTime.of(2026, 5, 1, 0, 0)",
+    "List":          "List.of()",
+    "Optional":      "Optional.empty()",
+}
+
+
+@dataclass
+class MockField:
+    """A @Mock or @MockBean field to declare in the test class."""
+    name: str           # e.g.: productRepository
+    type: str           # e.g.: ProductRepository
+    mock_type: str      # "Mock" for Service, "MockBean" for Controller
+
+
+@dataclass
+class TestData:
+    """An object created in @BeforeEach."""
+    variable_name: str  # e.g.: product
+    type: str           # e.g.: Product
+    builder_fields: list[tuple[str, str]]  # [(fieldName, testValue), ...]
+
+
+@dataclass
+class TestMethod:
+    """A test method to generate."""
+    test_name: str          # e.g.: findById_shouldReturnDTO_whenProductExists
+    method_under_test: str  # e.g.: findById
+    scenario: str           # "happy_path"|"not_found"|"empty_list"|"null_input"|"created"
+    given_mocks: list[str]  # when(...).thenReturn(...) lines
+    act_line: str           # call to the method under test
+    assert_lines: list[str] # assertThat(...) lines
+    verify_lines: list[str] # verify(...) lines
+
+
+@dataclass
+class TestClass:
+    """A complete test class to generate."""
+    test_class_name: str        # e.g.: ProductServiceImplTest
+    class_under_test: str       # e.g.: ProductServiceImpl
+    test_type: str              # SERVICE_IMPL|CONTROLLER|REPOSITORY|MAPPER
+    package_name: str           # e.g.: com.pio.ecommerce.service
+    base_package: str           # e.g.: com.pio.ecommerce
+    imports_needed: list[str]
+    mock_fields: list[MockField]
+    inject_mocks_field: str     # name of @InjectMocks field
+    inject_mocks_type: str      # type of @InjectMocks field
+    setup_data: list[TestData]
+    test_methods: list[TestMethod]
+    api_prefix: str = ""        # for controllers, e.g.: /api/v1
+
+
+@dataclass
+class TestPlan:
+    """Complete plan of all tests to generate."""
+    test_classes: list[TestClass]
+    base_package: str

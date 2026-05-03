@@ -1,0 +1,51 @@
+package {{ tc.package_name }};
+
+{% for imp in tc.imports_needed %}
+import {{ imp }};
+{% endfor %}
+
+@WebMvcTest({{ tc.class_under_test }}.class)
+class {{ tc.test_class_name }} {
+
+    @Autowired
+    private MockMvc mockMvc;
+
+    @Autowired
+    private ObjectMapper objectMapper;
+
+{% for mock in tc.mock_fields %}
+    @MockBean
+    private {{ mock.type }} {{ mock.name }};
+{% endfor %}
+
+{% for data in tc.setup_data %}
+    private {{ data.type }} {{ data.variable_name }};
+{% endfor %}
+
+    @BeforeEach
+    void setUp() {
+{% for data in tc.setup_data %}
+        {{ data.variable_name }} = {{ data.type }}.builder()
+{% for field_name, field_value in data.builder_fields %}
+                .{{ field_name }}({{ field_value }})
+{% endfor %}
+                .build();
+{% endfor %}
+    }
+
+{% for method in tc.test_methods %}
+    @Test
+    void {{ method.test_name }}() throws Exception {
+{% for mock_line in method.given_mocks %}
+        {{ mock_line }}
+{% endfor %}
+
+        {{ method.act_line }}
+
+{% for assert_line in method.assert_lines %}
+        {{ assert_line }}
+{% endfor %}
+    }
+
+{% endfor %}
+}

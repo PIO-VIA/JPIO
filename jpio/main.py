@@ -12,10 +12,11 @@ from jpio.commands.new import start_command
 from jpio.commands.scan import scan_command
 from jpio.commands.add import add_command
 from jpio.commands.security import security_command
+from jpio.commands.test import test_command
 
 
 @click.group()
-@click.version_option(version="0.5.2", prog_name="JPIO")
+@click.version_option(version="0.6.0", prog_name="JPIO")
 def cli():
     """
     \b
@@ -31,6 +32,7 @@ cli.add_command(start_command)
 cli.add_command(scan_command)
 cli.add_command(add_command)
 cli.add_command(security_command)
+cli.add_command(test_command)
 
 
 if __name__ == "__main__":

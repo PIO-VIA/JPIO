@@ -29,7 +29,7 @@ def print_banner() -> None:
     banner = Text(ascii_art, justify="center", style="bold cyan")
     banner.append("\n — Java Project Input/Output\n", style="bold white")
     banner.append(" Spring Boot Scaffolding CLI", style="dim white")
-    banner.append("  •  v0.5.2", style="dim cyan")
+    banner.append("  •  v0.6.0", style="dim cyan")
 
     console.print(
         Panel(banner, border_style="cyan", padding=(1, 2), box=box.DOUBLE)
@@ -193,4 +193,62 @@ def print_security_plan(security_config) -> None:
     table.add_row("Public Routes",  routes)
 
     console.print(table)
+    console.print()
+
+
+# ---------------------------------------------------------------------------
+# Test Reports (jpio test)
+# ---------------------------------------------------------------------------
+
+def print_parse_report(parse_result: "ParseResult") -> None:
+    """
+    Displays a summary table of the code analysis.
+    """
+    table = Table(
+        title="[bold cyan]JPIO — Source Code Analysis[/bold cyan]",
+        box=box.ROUNDED,
+        border_style="cyan",
+        header_style="bold white",
+    )
+
+    table.add_column("Class", style="bold white")
+    table.add_column("Type",  style="cyan")
+    table.add_column("Methods", style="dim white", justify="right")
+
+    for cls in parse_result.classes:
+        table.add_row(
+            cls.name,
+            cls.class_type,
+            str(len(cls.methods))
+        )
+
+    console.print(table)
+    console.print()
+
+
+def print_test_summary(test_plan: "TestPlan", file_count: int) -> None:
+    """
+    Displays the final test generation summary.
+    """
+    total_methods = sum(len(tc.test_methods) for tc in test_plan.test_classes)
+    
+    # Distribution
+    dist = {}
+    for tc in test_plan.test_classes:
+        dist[tc.test_type] = dist.get(tc.test_type, 0) + 1
+
+    dist_str = " | ".join([f"{k.replace('_IMPL', '').capitalize()}: {v}" for k, v in dist.items()])
+
+    summary = Text()
+    summary.append(f"  ✅  Test generation completed!\n\n", style="bold green")
+    summary.append(f"  Test Files : ", style="dim white")
+    summary.append(f"{file_count} created\n", style="bold cyan")
+    summary.append(f"  Methods    : ", style="dim white")
+    summary.append(f"{total_methods} @Test generated\n", style="bold cyan")
+    summary.append(f"  Details    : ", style="dim white")
+    summary.append(f"{dist_str}", style="dim white")
+
+    console.print(
+        Panel(summary, border_style="green", padding=(1, 4), box=box.DOUBLE)
+    )
     console.print()

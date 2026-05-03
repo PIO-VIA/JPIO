@@ -1,0 +1,37 @@
+package {{ tc.package_name }};
+
+{% for imp in tc.imports_needed %}
+import {{ imp }};
+{% endfor %}
+
+class {{ tc.test_class_name }} {
+
+    private final {{ tc.inject_mocks_type }} {{ tc.inject_mocks_field }}
+        = new {{ tc.inject_mocks_type }}();
+
+{% for data in tc.setup_data %}
+    private {{ data.type }} {{ data.variable_name }};
+{% endfor %}
+
+    @BeforeEach
+    void setUp() {
+{% for data in tc.setup_data %}
+        {{ data.variable_name }} = {{ data.type }}.builder()
+{% for field_name, field_value in data.builder_fields %}
+                .{{ field_name }}({{ field_value }})
+{% endfor %}
+                .build();
+{% endfor %}
+    }
+
+{% for method in tc.test_methods %}
+    @Test
+    void {{ method.test_name }}() {
+        {{ method.act_line }}
+{% for assert_line in method.assert_lines %}
+        {{ assert_line }}
+{% endfor %}
+    }
+
+{% endfor %}
+}
