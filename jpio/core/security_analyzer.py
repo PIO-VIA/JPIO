@@ -37,14 +37,27 @@ def run_security_wizard(config: ProjectConfig) -> SecurityConfig:
     extra_user_fields = []
     
     if has_existing_user:
-        if config.entities:
-            existing_user_entity = questionary.select(
-                "Select existing User entity:",
-                choices=[e.name for e in config.entities],
+        choices = [e.name for e in config.entities]
+        choices.append("[ Enter name manually ]")
+        
+        selection = questionary.select(
+            "Select or enter existing User entity:",
+            choices=choices,
+            style=QSTYLE
+        ).ask()
+        
+        if selection == "[ Enter name manually ]":
+            existing_user_entity = questionary.text(
+                "Enter existing User entity name:",
                 style=QSTYLE
-            ).ask()
+            ).ask().strip()
         else:
-            print("  [bold yellow]⚠[/bold yellow] No entities found in configuration. JPIO will create User.java.")
+            existing_user_entity = selection
+
+        print(f"  [bold yellow]⚠[/bold yellow] Important: Your [bold]{existing_user_entity}[/bold] entity must:")
+        print(f"     1. Implement [bold]org.springframework.security.core.userdetails.UserDetails[/bold]")
+        print(f"     2. Have a repository [bold]{existing_user_entity}Repository[/bold] with method [bold]findBy{username_field.capitalize()}[/bold]")
+        print(f"     3. (Recommended) Use Lombok [bold]@Builder[/bold] for the AuthController to work as generated.")
     
     if not existing_user_entity:
         print("  [bold cyan]ℹ[/bold cyan] User.java will be generated with: id, " + username_field + ", password, role.")

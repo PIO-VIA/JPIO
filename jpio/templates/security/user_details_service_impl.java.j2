@@ -1,6 +1,6 @@
 package {{ base_package }}.security;
 
-import {{ base_package }}.repository.UserRepository;
+import {{ base_package }}.repository.{{ user_repository }};
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -13,17 +13,17 @@ import org.springframework.stereotype.Service;
 {% endif %}
 public class UserDetailsServiceImpl implements UserDetailsService {
 
-    private final UserRepository userRepository;
+    private final {{ user_repository }} {{ user_repo_var }};
 
 {% if not pom_features.has_lombok %}
-    public UserDetailsServiceImpl(UserRepository userRepository) {
-        this.userRepository = userRepository;
+    public UserDetailsServiceImpl({{ user_repository }} {{ user_repo_var }}) {
+        this.{{ user_repo_var }} = {{ user_repo_var }};
     }
 {% endif %}
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        return userRepository.findBy{{ username_field_capitalized }}(username)
+        return {{ user_repo_var }}.findBy{{ username_field_capitalized }}(username)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found with identifier: " + username));
     }
 }

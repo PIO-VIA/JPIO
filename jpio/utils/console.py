@@ -29,7 +29,7 @@ def print_banner() -> None:
     banner = Text(ascii_art, justify="center", style="bold cyan")
     banner.append("\n — Java Project Input/Output\n", style="bold white")
     banner.append(" Spring Boot Scaffolding CLI", style="dim white")
-    banner.append("  •  v0.5.1", style="dim cyan")
+    banner.append("  •  v0.5.2", style="dim cyan")
 
     console.print(
         Panel(banner, border_style="cyan", padding=(1, 2), box=box.DOUBLE)

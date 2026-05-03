@@ -3,9 +3,11 @@ package {{ base_package }}.controller;
 import {{ base_package }}.dto.request.LoginRequestDTO;
 import {{ base_package }}.dto.request.RegisterRequestDTO;
 import {{ base_package }}.dto.response.AuthResponseDTO;
-import {{ base_package }}.models.entity.User;
+import {{ base_package }}.models.entity.{{ user_entity }};
+{% if generate_user %}
 import {{ base_package }}.models.enum.Role;
-import {{ base_package }}.repository.UserRepository;
+{% endif %}
+import {{ base_package }}.repository.{{ user_repository }};
 import {{ base_package }}.security.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -24,14 +26,14 @@ import org.springframework.web.bind.annotation.RestController;
 {% endif %}
 public class AuthController {
 
-    private final UserRepository userRepository;
+    private final {{ user_repository }} {{ user_repo_var }};
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
     private final AuthenticationManager authenticationManager;
 
 {% if not pom_features.has_lombok %}
-    public AuthController(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtUtil jwtUtil, AuthenticationManager authenticationManager) {
-        this.userRepository = userRepository;
+    public AuthController({{ user_repository }} {{ user_repo_var }}, PasswordEncoder passwordEncoder, JwtUtil jwtUtil, AuthenticationManager authenticationManager) {
+        this.{{ user_repo_var }} = {{ user_repo_var }};
         this.passwordEncoder = passwordEncoder;
         this.jwtUtil = jwtUtil;
         this.authenticationManager = authenticationManager;
@@ -40,16 +42,18 @@ public class AuthController {
 
     @PostMapping("/register")
     public ResponseEntity<AuthResponseDTO> register(@RequestBody RegisterRequestDTO request) {
-        User user = User.builder()
+        {{ user_entity }} user = {{ user_entity }}.builder()
                 .{{ security_config.username_field }}(request.get{{ username_field_capitalized }}())
                 .password(passwordEncoder.encode(request.getPassword()))
+{% if generate_user %}
                 .role(Role.USER)
+{% endif %}
 {% for field in security_config.extra_user_fields %}
                 .{{ field.name }}(request.get{{ field.capitalized }}())
 {% endfor %}
                 .build();
 
-        userRepository.save(user);
+        {{ user_repo_var }}.save(user);
         String token = jwtUtil.generateToken(user);
         return ResponseEntity.ok(new AuthResponseDTO(token, user.get{{ username_field_capitalized }}()));
     }
@@ -63,7 +67,7 @@ public class AuthController {
                 )
         );
 
-        User user = userRepository.findBy{{ username_field_capitalized }}(request.get{{ username_field_capitalized }}())
+        {{ user_entity }} user = {{ user_repo_var }}.findBy{{ username_field_capitalized }}(request.get{{ username_field_capitalized }}())
                 .orElseThrow();
         String token = jwtUtil.generateToken(user);
         return ResponseEntity.ok(new AuthResponseDTO(token, user.get{{ username_field_capitalized }}()));

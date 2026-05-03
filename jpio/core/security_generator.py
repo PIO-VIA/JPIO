@@ -16,12 +16,22 @@ def generate_security(config: ProjectConfig, security_config: SecurityConfig) ->
     
     java_base = f"src/main/java/{config.package_path}"
     
+    user_entity = security_config.existing_user_entity or "User"
+    user_repository = f"{user_entity}Repository"
+    user_repo_var = user_repository[0].lower() + user_repository[1:]
+
+    generate_user = not security_config.existing_user_entity
+
     ctx = {
         "base_package": config.base_package,
         "api_prefix": config.api_prefix,
         "security_config": security_config,
         "pom_features": config.pom_features,
-        "username_field_capitalized": security_config.username_field[0].upper() + security_config.username_field[1:]
+        "username_field_capitalized": security_config.username_field[0].upper() + security_config.username_field[1:],
+        "user_entity": user_entity,
+        "user_repository": user_repository,
+        "user_repo_var": user_repo_var,
+        "generate_user": generate_user
     }
     
     security_templates = [
