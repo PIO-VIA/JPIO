@@ -16,9 +16,9 @@ def check_java_available() -> Tuple[bool, str]:
     try:
         result = subprocess.run(
             ["java", "-version"],
-            capture_output=True,
-            text=True,
-            stderr=subprocess.STDOUT
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True
         )
         if result.returncode == 0:
             # Output is usually on stderr for java -version
