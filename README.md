@@ -97,6 +97,7 @@ jpio start
 | `jpio add` | Add a new entity to an existing JPIO project |
 | `jpio security` | Add a complete Spring Security JWT layer |
 | `jpio scan` | Display the current state of a JPIO project |
+| `jpio test` | Analyze Java code and generate JUnit 5 + Mockito tests |
 
 ### `jpio start`
 Launches the full interactive wizard. Detects your existing package structure, `pom.xml` dependencies, and configuration format (`properties` vs `yaml`). Generates the complete CRUD structure for your entities.
@@ -114,24 +115,37 @@ Adds a complete **Spring Security + JWT** implementation to your project.
 ### `jpio scan`
 Reads `.jpio.json` and displays a summary table of the project: entities, fields, and relations.
 
+### `jpio test`
+Analyzes your existing Java code (Service, Controller, Repository, Mapper) and generates comprehensive **JUnit 5 + Mockito** unit tests.
+- **Smart Analysis**: Scans your source code to detect dependencies and injected fields.
+- **Scenario Generation**: Automatically creates happy path and edge case scenarios (e.g., `findById` -> `shouldReturnObject` & `shouldThrowNotFoundException`).
+- **Mockito Integration**: Generates all required `@Mock` and `@InjectMocks` fields.
+- **MockMvc Support**: For Controllers, it generates `WebMvcTest` with `MockMvc` calls and status assertions.
+- **Filtering**: Use `--only EntityName` or `--type service` to target specific areas.
+
 ---
 
 ## Project Architecture
 
 ```
-jpio/
 ├── jpio/
 │   ├── main.py                        # CLI entry point (Click)
+│   ├── bin/
+│   │   └── jpio-parser.jar            # Java parser utility
 │   ├── commands/
 │   │   ├── new.py                     # `jpio start` — full project wizard
 │   │   ├── add.py                     # `jpio add` — add entity
 │   │   ├── security.py                # `jpio security` — security flow
-│   │   └── scan.py                    # `jpio scan` — display project state
+│   │   ├── scan.py                    # `jpio scan` — display project state
+│   │   └── test.py                    # `jpio test` — unit test generator
 │   ├── core/
 │   │   ├── models.py                  # Dataclasses: Field, Relation, Entity, ProjectConfig
 │   │   ├── analyzer.py                # Interactive prompts → builds ProjectConfig
 │   │   ├── security_analyzer.py       # Security wizard
+│   │   ├── java_parser.py             # JAR parser wrapper
+│   │   ├── test_plan_analyzer.py      # Test logic brain
 │   │   ├── generator.py               # Jinja2 rendering engine
+│   │   ├── test_generator.py          # Test rendering engine
 │   │   ├── security_generator.py      # Security file generation
 │   │   └── writer.py                  # Java code strings → files on disk
 │   ├── utils/
@@ -142,10 +156,12 @@ jpio/
 │       ├── exception/                 # Global exception handling templates
 │       ├── config/                    # Swagger/SpringDoc templates
 │       ├── security/                  # Spring Security JWT templates
+│       ├── tests/                     # JUnit 5 templates
 │       └── project/                   # application.properties/yaml templates
 ├── tests/
 │   ├── test_analyzer.py
 │   ├── test_generator.py
+│   ├── test_test_generator.py
 │   ├── test_security_generator.py
 │   └── test_writer.py
 ├── pyproject.toml
@@ -220,6 +236,7 @@ JPIO automatically handles:
 - [x] `jpio scan` project inspector
 - [x] Enums support & Request/Response DTO separation
 - [x] Spring Security scaffolding (v0.5.0)
+- [x] Smart Unit Test generation (v0.6.0)
 - [ ] `jpio add enum` command for existing projects
 - [ ] IntelliJ IDEA plugin
 - [ ] VS Code extension

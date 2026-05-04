@@ -109,8 +109,7 @@ def start_command():
     config = run_wizard(pom_features, folder_mapping)
 
     if not config.entities:
-        print_error("No entities defined. Aborting.")
-        raise SystemExit(1)
+        print_warning("No entities defined. Only global configurations will be generated.")
 
     # ── Generation ───────────────────────────────────────────────────────────
     print_info("Generating files...")

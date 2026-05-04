@@ -16,7 +16,7 @@ from jpio.commands.test import test_command
 
 
 @click.group()
-@click.version_option(version="0.6.0", prog_name="JPIO")
+@click.version_option(version="0.6.1", prog_name="JPIO")
 def cli():
     """
     \b

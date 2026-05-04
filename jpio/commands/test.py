@@ -10,7 +10,7 @@ from jpio.core.models import ProjectConfig
 from jpio.core.java_parser import parse_project, check_java_available, JPIOParserError
 from jpio.core.test_plan_analyzer import build_test_plan
 from jpio.core.test_generator import generate_tests
-from jpio.utils.file_helper import write_all
+from jpio.core.writer import write_all
 
 @click.command("test")
 @click.option("--only", default=None,

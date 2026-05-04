@@ -48,10 +48,10 @@ QSTYLE = questionary.Style([
 # ---------------------------------------------------------------------------
 
 def run_wizard(pom_features: PomFeatures = None, folder_mapping: FolderMapping = None) -> ProjectConfig:
-    \"\"\"
+    """
     Runs the complete questionnaire and returns a ProjectConfig.
     Entry point called by commands/new.py
-    \"\"\"
+    """
     if pom_features is None:
         pom_features = PomFeatures()
     
@@ -101,6 +101,17 @@ def run_wizard(pom_features: PomFeatures = None, folder_mapping: FolderMapping =
     entity_number = 1
 
     while True:
+        # ── Project Summary ──────────────────────────────────────────────────
+        if entities or enums or referenced_names:
+            print_info("Current Project State:")
+            if enums:
+                print_info(f"  • Enums: [bold cyan]{', '.join([e.name for e in enums])}[/bold cyan]")
+            if entities:
+                print_info(f"  • Entities: [bold cyan]{', '.join([e.name for e in entities])}[/bold cyan]")
+            if referenced_names:
+                print_info(f"  • Referenced (not yet defined): [bold yellow]{', '.join(referenced_names)}[/bold yellow]")
+            print_info("")
+
         print_section(f"Entity {entity_number}")
         
         # If we have referenced names, suggest the first one
@@ -110,7 +121,8 @@ def run_wizard(pom_features: PomFeatures = None, folder_mapping: FolderMapping =
             entity_number, 
             list(entity_names), 
             enums, 
-            suggested_name=default_name
+            suggested_name=default_name,
+            referenced_names=referenced_names
         )
 
         if entity:
@@ -121,12 +133,20 @@ def run_wizard(pom_features: PomFeatures = None, folder_mapping: FolderMapping =
             if entity.name in referenced_names:
                 referenced_names.remove(entity.name)
                 
-            # Add new references
-            for rel in entity.relations:
-                if rel.target not in entity_names and rel.target not in referenced_names:
-                    referenced_names.append(rel.target)
-                    
             print_success(f"Entity [bold]{entity.name}[/bold] added.")
+        else:
+            # Creation was cancelled or failed
+            if not entities:
+                retry = questionary.confirm(
+                    "No entities defined yet. Would you like to try again?",
+                    default=True,
+                    style=QSTYLE
+                ).ask()
+                if not retry:
+                    break
+                continue
+            else:
+                print_info("Entity creation cancelled.")
 
         if referenced_names:
             print_info(f"Entities referenced but not yet defined: [bold cyan]{', '.join(referenced_names)}[/bold cyan]")
@@ -158,10 +178,10 @@ def run_wizard(pom_features: PomFeatures = None, folder_mapping: FolderMapping =
 
 
 def run_add_wizard(existing_entity_names: list[str], existing_enums: list[Enum] = None) -> list[Entity]:
-    \"\"\"
+    """
     Runs the questionnaire to add entities.
     Returns a list of entities configured.
-    \"\"\"
+    """
     print_section("New Entities")
     entities: list[Entity] = []
     entity_names = set(existing_entity_names)
@@ -171,16 +191,19 @@ def run_add_wizard(existing_entity_names: list[str], existing_enums: list[Enum] 
 
     while True:
         default_name = referenced_names[0] if referenced_names else None
-        entity = _collect_entity(entity_number, list(entity_names), existing_enums, suggested_name=default_name)
+        entity = _collect_entity(
+            entity_number, 
+            list(entity_names), 
+            existing_enums, 
+            suggested_name=default_name,
+            referenced_names=referenced_names
+        )
         
         if entity:
             entities.append(entity)
             entity_names.add(entity.name)
             if entity.name in referenced_names:
                 referenced_names.remove(entity.name)
-            for rel in entity.relations:
-                if rel.target not in entity_names and rel.target not in referenced_names:
-                    referenced_names.append(rel.target)
             print_success(f"Entity [bold]{entity.name}[/bold] configured.")
 
         if referenced_names:
@@ -212,9 +235,10 @@ def _collect_entity(
     number: int, 
     existing_entity_names: list[str], 
     enums: list[Enum] = None,
-    suggested_name: str = None
+    suggested_name: str = None,
+    referenced_names: list[str] = None
 ) -> Entity | None:
-    \"\"\"Collects name, fields, and relations for an entity.\"\"\"
+    """Collects name, fields, and relations for an entity."""
 
     # ── Name ─────────────────────────────────────────────────────────────────
     name = questionary.text(
@@ -245,8 +269,8 @@ def _collect_entity(
             choices=[
                 "Add Field",
                 "Add Relation",
-                "Review & Finish",
-                "Cancel Entity"
+                "Save Entity & Continue",
+                "Discard Entity (Delete)"
             ],
             style=QSTYLE
         ).ask()
@@ -258,16 +282,20 @@ def _collect_entity(
         elif action == "Add Relation":
             new_relations = _collect_relations(name, existing_entity_names, start_number=len(relations) + 1)
             relations.extend(new_relations)
+            if referenced_names is not None:
+                for rel in new_relations:
+                    if rel.target not in existing_entity_names and rel.target not in referenced_names and rel.target != name:
+                        referenced_names.append(rel.target)
             
-        elif action == "Review & Finish":
+        elif action == "Save Entity & Continue":
             if not fields and not relations:
                 print_warning(f"Entity {name} has no fields and no relations.")
                 if not questionary.confirm("Are you sure you want to save it as is?", default=False, style=QSTYLE).ask():
                     continue
             break
             
-        elif action == "Cancel Entity":
-            if questionary.confirm(f"Discard entity {name}?", default=False, style=QSTYLE).ask():
+        elif action == "Discard Entity (Delete)":
+            if questionary.confirm(f"Discard entity {name}? All its fields and relations will be lost.", default=False, style=QSTYLE).ask():
                 return None
             continue
 
@@ -279,7 +307,7 @@ def _collect_entity(
 # ---------------------------------------------------------------------------
 
 def _collect_fields(enums: list[Enum] = None, start_number: int = 1) -> list[Field]:
-    \"\"\"Collects entity fields in a loop.\"\"\"
+    """Collects entity fields in a loop."""
     fields: list[Field] = []
     field_number = start_number
 
@@ -366,7 +394,7 @@ def _collect_relations(
     existing_entity_names: list[str],
     start_number: int = 1
 ) -> list[Relation]:
-    \"\"\"Collects entity relations in a loop.\"\"\"
+    """Collects entity relations in a loop."""
     relations: list[Relation] = []
     relation_number = start_number
 

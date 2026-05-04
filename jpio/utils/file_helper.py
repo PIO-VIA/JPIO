@@ -166,7 +166,7 @@ def analyze_pom(path: Path = Path(".")) -> PomFeatures:
 
 
 def inject_security_dependencies(path: Path = Path(".")) -> bool:
-    \"\"\"
+    """
     Adds Spring Security and JJWT dependencies to pom.xml.
 
     Strategy:
@@ -177,7 +177,7 @@ def inject_security_dependencies(path: Path = Path(".")) -> bool:
     - Rewrite the file
 
     Returns True if injection succeeded, False if already present or error.
-    \"\"\"
+    """
     pom_path = path / "pom.xml"
     if not pom_path.exists():
         return False
@@ -187,7 +187,7 @@ def inject_security_dependencies(path: Path = Path(".")) -> bool:
     if "spring-boot-starter-security" in content:
         return False
 
-    security_deps = \"\"\"
+    security_deps = """
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-security</artifactId>
@@ -209,7 +209,7 @@ def inject_security_dependencies(path: Path = Path(".")) -> bool:
             <version>0.11.5</version>
             <scope>runtime</scope>
         </dependency>
-\"\"\"
+"""
     
     if "</dependencies>" in content:
         # Insert before the last </dependencies>
@@ -221,11 +221,11 @@ def inject_security_dependencies(path: Path = Path(".")) -> bool:
 
 
 def inject_jpa_dependency(path: Path = Path(".")) -> bool:
-    \"\"\"
+    """
     Adds Spring Data JPA and H2 database dependencies to pom.xml.
 
     Returns True if injection succeeded, False if already present or error.
-    \"\"\"
+    """
     pom_path = path / "pom.xml"
     if not pom_path.exists():
         return False
@@ -235,7 +235,7 @@ def inject_jpa_dependency(path: Path = Path(".")) -> bool:
     if "spring-boot-starter-data-jpa" in content:
         return False
 
-    jpa_deps = \"\"\"
+    jpa_deps = """
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-jpa</artifactId>
@@ -245,7 +245,7 @@ def inject_jpa_dependency(path: Path = Path(".")) -> bool:
             <artifactId>h2</artifactId>
             <scope>runtime</scope>
         </dependency>
-\"\"\"
+"""
     
     if "</dependencies>" in content:
         # Insert before the last </dependencies>
