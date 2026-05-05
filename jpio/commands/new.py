@@ -1,16 +1,10 @@
-"""
-
-Command: jpio start
-Orchestrates the full flow:
-    project detection → wizard → generation → writing → final report
-"""
-
 import json
+import questionary
 from pathlib import Path
 
 import click
 
-from jpio.core.analyzer import run_wizard
+from jpio.core.analyzer import run_wizard, QSTYLE, _ask
 from jpio.core.models import FolderMapping
 from jpio.core.generator import generate_all
 from jpio.core.writer import write_all
@@ -19,8 +13,10 @@ from jpio.utils.console import (
     print_success,
     print_error,
     print_info,
+    print_warning,
     print_summary,
     print_folder_mapping_report,
+    console,
 )
 from jpio.utils.file_helper import (
     is_spring_boot_project,
@@ -38,6 +34,22 @@ def start_command():
     Launch the JPIO wizard to scaffold business layers
     for an existing Spring Boot project.
     """
+    try:
+        _run_start()
+    except (KeyboardInterrupt, EOFError):
+        console.print(
+            "\n\n  [bold yellow]⚠[/bold yellow]  "
+            "Opération annulée par l'utilisateur.\n"
+        )
+        raise SystemExit(0)
+    except click.exceptions.Abort:
+        console.print(
+            "\n\n  [bold yellow]⚠[/bold yellow]  "
+            "Opération annulée.\n"
+        )
+        raise SystemExit(0)
+
+def _run_start():
     print_banner()
 
     base_path = Path(".")
@@ -54,22 +66,63 @@ def start_command():
     project_name = detect_project_name(base_path)
     print_success(f"Spring Boot project detected: [bold cyan]{project_name}[/bold cyan]")
 
+    # ── Vérification projet déjà initialisé ─────────────────────────
+    jpio_file = base_path / ".jpio.json"
+
+    if jpio_file.exists():
+        # Lire la version et les entités existantes
+        try:
+            existing_data = json.loads(jpio_file.read_text(encoding="utf-8"))
+            existing_entities = existing_data.get("entities", [])
+            entity_names = [e["name"] for e in existing_entities]
+        except Exception:
+            existing_entities = []
+            entity_names = []
+
+        print_warning(
+            f"Ce projet a déjà été initialisé avec JPIO.\n"
+            f"   Entités existantes : "
+            f"{', '.join(entity_names) if entity_names else 'aucune'}"
+        )
+
+        action = _ask(questionary.select(
+            "Que voulez-vous faire ?",
+            choices=[
+                "Ajouter de nouvelles entités  (recommandé → jpio add)",
+                "Régénérer le projet            (écrase les fichiers existants)",
+                "Annuler",
+            ],
+            style=QSTYLE,
+        ))
+
+        if "Annuler" in action:
+            print_info("Opération annulée.")
+            raise SystemExit(0)
+
+        if "Ajouter" in action:
+            print_info(
+                "Utilisez la commande [bold]jpio add[/bold] "
+                "pour ajouter une entité à ce projet."
+            )
+            raise SystemExit(0)
+
+        # Si "Régénérer" → continuer normalement avec le wizard
+        print_warning("Régénération en cours — les fichiers existants seront ignorés.")
+
     # ── pom.xml Analysis ───────────────────────────────────────────────────
     pom_features = analyze_pom(base_path)
     
     if pom_features.has_jpa:
         print_info("JPA detected ✔")
     else:
-        from jpio.core.analyzer import QSTYLE
         from jpio.utils.file_helper import inject_jpa_dependency
-        import questionary
 
         print_info("JPA not detected.")
-        add_jpa = questionary.confirm(
+        add_jpa = _ask(questionary.confirm(
             "Would you like to add JPA dependency to optimize repository writing?",
             default=True,
             style=QSTYLE,
-        ).ask()
+        ))
 
         if add_jpa:
             if inject_jpa_dependency(base_path):

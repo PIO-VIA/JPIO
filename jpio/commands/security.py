@@ -1,14 +1,11 @@
-"""
-Command: jpio security
-Adds Spring Security JWT layer to an existing JPIO project.
-"""
-
 import json
+import questionary
 from pathlib import Path
 import click
 
 from jpio.core.models import ProjectConfig
 from jpio.core.security_analyzer import run_security_wizard
+from jpio.core.analyzer import _ask
 from jpio.core.security_generator import generate_security
 from jpio.core.writer import write_all
 from jpio.utils.console import (
@@ -18,6 +15,7 @@ from jpio.utils.console import (
     print_info,
     print_warning,
     print_security_plan,
+    console,
 )
 from jpio.utils.file_helper import (
     is_spring_boot_project,
@@ -30,6 +28,22 @@ def security_command():
     """
     Add Spring Security JWT authentication to the project.
     """
+    try:
+        _run_security()
+    except (KeyboardInterrupt, EOFError):
+        console.print(
+            "\n\n  [bold yellow]⚠[/bold yellow]  "
+            "Opération annulée par l'utilisateur.\n"
+        )
+        raise SystemExit(0)
+    except click.exceptions.Abort:
+        console.print(
+            "\n\n  [bold yellow]⚠[/bold yellow]  "
+            "Opération annulée.\n"
+        )
+        raise SystemExit(0)
+
+def _run_security():
     print_banner()
     
     base_path = Path(".")
@@ -62,7 +76,9 @@ def security_command():
     
     # 4. Show Plan
     print_security_plan(security_config)
-    if not questionary.confirm("Do you want to proceed with the generation?", default=True).ask():
+    confirm = _ask(questionary.confirm("Do you want to proceed with the generation?", default=True))
+    
+    if not confirm:
         print_info("Security addition cancelled.")
         raise SystemExit(0)
         
@@ -88,5 +104,3 @@ def security_command():
     # 9. Final Success
     print_success("Spring Security JWT layer successfully added!")
     print_info("Note: You may need to refresh your IDE or rebuild the project.")
-
-import questionary # Added import here just in case, though it's usually in analyzer

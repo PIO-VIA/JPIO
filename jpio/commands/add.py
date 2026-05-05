@@ -18,6 +18,7 @@ from jpio.utils.console import (
     print_error,
     print_info,
     print_summary,
+    console,
 )
 from jpio.utils.file_helper import (
     is_spring_boot_project,
@@ -30,6 +31,22 @@ def add_command():
     """
     Add a new entity to an existing JPIO project.
     """
+    try:
+        _run_add()
+    except (KeyboardInterrupt, EOFError):
+        console.print(
+            "\n\n  [bold yellow]⚠[/bold yellow]  "
+            "Opération annulée par l'utilisateur.\n"
+        )
+        raise SystemExit(0)
+    except click.exceptions.Abort:
+        console.print(
+            "\n\n  [bold yellow]⚠[/bold yellow]  "
+            "Opération annulée.\n"
+        )
+        raise SystemExit(0)
+
+def _run_add():
     print_banner()
 
     base_path = Path(".")

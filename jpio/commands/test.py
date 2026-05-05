@@ -4,8 +4,10 @@ import json
 
 from jpio.utils.console import (
     print_banner, print_info, print_success, print_error, 
-    print_warning, print_parse_report, print_test_summary, print_section
+    print_warning, print_parse_report, print_test_summary, print_section,
+    console
 )
+from jpio.utils.file_helper import detect_base_package
 from jpio.core.models import ProjectConfig
 from jpio.core.java_parser import parse_project, check_java_available, JPIOParserError
 from jpio.core.test_plan_analyzer import build_test_plan
@@ -22,6 +24,22 @@ def test_command(only, test_type_opt):
     """
     Analyzes Java code and generates JUnit 5 + Mockito tests.
     """
+    try:
+        _run_test(only, test_type_opt)
+    except (KeyboardInterrupt, EOFError):
+        console.print(
+            "\n\n  [bold yellow]⚠[/bold yellow]  "
+            "Opération annulée par l'utilisateur.\n"
+        )
+        raise SystemExit(0)
+    except click.exceptions.Abort:
+        console.print(
+            "\n\n  [bold yellow]⚠[/bold yellow]  "
+            "Opération annulée.\n"
+        )
+        raise SystemExit(0)
+
+def _run_test(only, test_type_opt):
     print_banner()
     base_path = Path(".")
 
@@ -31,17 +49,40 @@ def test_command(only, test_type_opt):
         raise click.exceptions.Exit(1)
 
     # 2. Check for .jpio.json
-    config_path = base_path / ".jpio.json"
-    if not config_path.exists():
-        print_error(".jpio.json not found. Run 'jpio scan' first.")
-        raise click.exceptions.Exit(1)
+    jpio_file = base_path / ".jpio.json"
 
-    try:
-        with open(config_path, "r") as f:
-            project_config = ProjectConfig.from_dict(json.load(f))
-    except Exception as e:
-        print_error(f"Error loading .jpio.json: {str(e)}")
-        raise click.exceptions.Exit(1)
+    if jpio_file.exists():
+        # Cas 1 : projet initialisé avec JPIO → utiliser la config existante
+        try:
+            data = json.loads(jpio_file.read_text(encoding="utf-8"))
+            project_config = ProjectConfig.from_dict(data)
+            print_success(".jpio.json trouvé — configuration chargée.")
+        except Exception as e:
+            print_error(f"Error loading .jpio.json: {str(e)}")
+            raise click.exceptions.Exit(1)
+    else:
+        # Cas 2 : projet Spring Boot sans JPIO → détecter automatiquement
+        print_warning(
+            ".jpio.json absent — détection automatique du projet en cours…"
+        )
+        base_package = detect_base_package(base_path)
+        if not base_package:
+            print_error(
+                "Package de base introuvable.\n"
+                "   Assurez-vous d'être dans la racine d'un projet Spring Boot\n"
+                "   avec un fichier *Application.java dans src/main/java/"
+            )
+            raise SystemExit(1)
+
+        print_success(f"Package détecté : [bold cyan]{base_package}[/bold cyan]")
+
+        # Créer un ProjectConfig minimal à la volée
+        project_config = ProjectConfig(
+            base_package=base_package,
+            api_prefix="/api/v1",
+            entities=[],
+            enums=[],
+        )
 
     # 3. Check Java availability
     print_section("Environment Verification")
@@ -52,7 +93,9 @@ def test_command(only, test_type_opt):
     
     print_success(f"Java {java_version} detected")
     print_success("Spring Boot project detected")
-    print_success(f".jpio.json found — {len(project_config.entities)} entities")
+    
+    if jpio_file.exists():
+        print_success(f".jpio.json found — {len(project_config.entities)} entities")
 
     # 4. Source path
     source_path = base_path / "src" / "main" / "java"

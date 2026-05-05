@@ -5,7 +5,7 @@ Produces a SecurityConfig object from user responses.
 
 import questionary
 from jpio.core.models import ProjectConfig, SecurityConfig, Field, Enum
-from jpio.core.analyzer import QSTYLE, _collect_fields
+from jpio.core.analyzer import QSTYLE, _collect_fields, _ask
 
 def run_security_wizard(config: ProjectConfig) -> SecurityConfig:
     """
@@ -13,25 +13,25 @@ def run_security_wizard(config: ProjectConfig) -> SecurityConfig:
     """
     
     # 1. Username Field
-    username_field = questionary.select(
+    username_field = _ask(questionary.select(
         "Field used as login identifier:",
         choices=["email", "username", "[ Enter manually ]"],
         default="email",
         style=QSTYLE
-    ).ask()
+    ))
     
     if username_field == "[ Enter manually ]":
-        username_field = questionary.text(
+        username_field = _ask(questionary.text(
             "Enter custom login field name:",
             style=QSTYLE
-        ).ask()
+        ))
     
     # 2. Existing User Entity
-    has_existing_user = questionary.confirm(
+    has_existing_user = _ask(questionary.confirm(
         "Does your project already have a User entity?",
         default=False,
         style=QSTYLE
-    ).ask()
+    ))
     
     existing_user_entity = ""
     extra_user_fields = []
@@ -40,17 +40,17 @@ def run_security_wizard(config: ProjectConfig) -> SecurityConfig:
         choices = [e.name for e in config.entities]
         choices.append("[ Enter name manually ]")
         
-        selection = questionary.select(
+        selection = _ask(questionary.select(
             "Select or enter existing User entity:",
             choices=choices,
             style=QSTYLE
-        ).ask()
+        ))
         
         if selection == "[ Enter name manually ]":
-            existing_user_entity = questionary.text(
+            existing_user_entity = _ask(questionary.text(
                 "Enter existing User entity name:",
                 style=QSTYLE
-            ).ask().strip()
+            )).strip()
         else:
             existing_user_entity = selection
 
@@ -61,11 +61,11 @@ def run_security_wizard(config: ProjectConfig) -> SecurityConfig:
     
     if not existing_user_entity:
         print("  [bold cyan]ℹ[/bold cyan] User.java will be generated with: id, " + username_field + ", password, role.")
-        add_extra = questionary.confirm(
+        add_extra = _ask(questionary.confirm(
             "Would you like to add extra fields to the new User entity?",
             default=False,
             style=QSTYLE
-        ).ask()
+        ))
         
         if add_extra:
             # We reuse the _collect_fields from analyzer.py
@@ -73,19 +73,19 @@ def run_security_wizard(config: ProjectConfig) -> SecurityConfig:
             extra_user_fields = _collect_fields(config.enums)
             
     # 3. JWT Secret
-    jwt_secret = questionary.text(
+    jwt_secret = _ask(questionary.text(
         "JWT Secret Key (min 32 chars recommended):",
         default="jpio-secret-key-change-me-in-production",
         style=QSTYLE
-    ).ask()
+    ))
     
     # 4. JWT Expiration
-    jwt_expiration_hours = questionary.text(
+    jwt_expiration_hours = _ask(questionary.text(
         "JWT validity duration (in hours):",
         default="24",
         validate=lambda v: v.isdigit() or "Please enter a number.",
         style=QSTYLE
-    ).ask()
+    ))
     jwt_expiration_hours = int(jwt_expiration_hours)
     
     # 5. Public Routes
@@ -93,10 +93,10 @@ def run_security_wizard(config: ProjectConfig) -> SecurityConfig:
     print("  [bold cyan]ℹ[/bold cyan] Default public routes: /auth/**, /swagger-ui/**, /swagger-ui.html, /api-docs/**")
     
     while True:
-        route = questionary.text(
+        route = _ask(questionary.text(
             "Add an extra public route (e.g., /api/public/**, empty to finish):",
             style=QSTYLE
-        ).ask()
+        ))
         
         if not route or not route.strip():
             break

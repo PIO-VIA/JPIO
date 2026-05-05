@@ -26,6 +26,19 @@ from jpio.utils.console import (
 )
 from jpio.utils.file_helper import detect_base_package, detect_project_name
 
+from jpio.utils.console import console
+
+class UserAbortedError(Exception):
+    """Levée quand l'utilisateur annule le wizard."""
+    pass
+
+def _ask(prompt):
+    answer = prompt.ask()
+    if answer is None:
+        raise UserAbortedError()
+    return answer
+
+
 
 # ---------------------------------------------------------------------------
 # Custom questionary Style
@@ -69,25 +82,25 @@ def run_wizard(pom_features: PomFeatures = None, folder_mapping: FolderMapping =
         base_package = detected_package
     else:
         print_warning("Could not automatically detect base package.")
-        base_package = questionary.text(
+        base_package = _ask(questionary.text(
             "Base package (e.g., com.yourname.myproject):",
             style=QSTYLE,
-        ).ask()
+        ))
 
     # ── API Prefix ─────────────────────────────────────────────────────────
-    api_prefix = questionary.text(
+    api_prefix = _ask(questionary.text(
         "API route prefix:",
         default="/api/v1",
         style=QSTYLE,
-    ).ask()
+    ))
 
     # ── Enum Collection ────────────────────────────────────────────
     enums: list[Enum] = []
-    has_enums = questionary.confirm(
+    has_enums = _ask(questionary.confirm(
         "Would you like to define Enums for this project?",
         default=False,
         style=QSTYLE,
-    ).ask()
+    ))
 
     if has_enums:
         print_section("Enums")
@@ -137,11 +150,11 @@ def run_wizard(pom_features: PomFeatures = None, folder_mapping: FolderMapping =
         else:
             # Creation was cancelled or failed
             if not entities:
-                retry = questionary.confirm(
+                retry = _ask(questionary.confirm(
                     "No entities defined yet. Would you like to try again?",
                     default=True,
                     style=QSTYLE
-                ).ask()
+                ))
                 if not retry:
                     break
                 continue
@@ -150,17 +163,17 @@ def run_wizard(pom_features: PomFeatures = None, folder_mapping: FolderMapping =
 
         if referenced_names:
             print_info(f"Entities referenced but not yet defined: [bold cyan]{', '.join(referenced_names)}[/bold cyan]")
-            add_another = questionary.confirm(
+            add_another = _ask(questionary.confirm(
                 f"Would you like to define {referenced_names[0]} now?",
                 default=True,
                 style=QSTYLE,
-            ).ask()
+            ))
         else:
-            add_another = questionary.confirm(
+            add_another = _ask(questionary.confirm(
                 "Add another entity?",
                 default=True,
                 style=QSTYLE,
-            ).ask()
+            ))
 
         if not add_another:
             break
@@ -178,54 +191,61 @@ def run_wizard(pom_features: PomFeatures = None, folder_mapping: FolderMapping =
 
 
 def run_add_wizard(existing_entity_names: list[str], existing_enums: list[Enum] = None) -> list[Entity]:
-    """
-    Runs the questionnaire to add entities.
-    Returns a list of entities configured.
-    """
-    print_section("New Entities")
-    entities: list[Entity] = []
-    entity_names = set(existing_entity_names)
-    referenced_names: list[str] = []
-    
-    entity_number = len(existing_entity_names) + 1
-
-    while True:
-        default_name = referenced_names[0] if referenced_names else None
-        entity = _collect_entity(
-            entity_number, 
-            list(entity_names), 
-            existing_enums, 
-            suggested_name=default_name,
-            referenced_names=referenced_names
-        )
+    try:
+        """
+        Runs the questionnaire to add entities.
+        Returns a list of entities configured.
+        """
+        print_section("New Entities")
+        entities: list[Entity] = []
+        entity_names = set(existing_entity_names)
+        referenced_names: list[str] = []
         
-        if entity:
-            entities.append(entity)
-            entity_names.add(entity.name)
-            if entity.name in referenced_names:
-                referenced_names.remove(entity.name)
-            print_success(f"Entity [bold]{entity.name}[/bold] configured.")
+        entity_number = len(existing_entity_names) + 1
 
-        if referenced_names:
-            print_info(f"Entities referenced but not yet defined: [bold cyan]{', '.join(referenced_names)}[/bold cyan]")
-            add_another = questionary.confirm(
-                f"Would you like to define {referenced_names[0]} now?",
-                default=True,
-                style=QSTYLE,
-            ).ask()
-        else:
-            add_another = questionary.confirm(
-                "Add another entity?",
-                default=False,
-                style=QSTYLE,
-            ).ask()
+        while True:
+            default_name = referenced_names[0] if referenced_names else None
+            entity = _collect_entity(
+                entity_number, 
+                list(entity_names), 
+                existing_enums, 
+                suggested_name=default_name,
+                referenced_names=referenced_names
+            )
+            
+            if entity:
+                entities.append(entity)
+                entity_names.add(entity.name)
+                if entity.name in referenced_names:
+                    referenced_names.remove(entity.name)
+                print_success(f"Entity [bold]{entity.name}[/bold] configured.")
 
-        if not add_another:
-            break
-        entity_number += 1
+            if referenced_names:
+                print_info(f"Entities referenced but not yet defined: [bold cyan]{', '.join(referenced_names)}[/bold cyan]")
+                add_another = _ask(questionary.confirm(
+                    f"Would you like to define {referenced_names[0]} now?",
+                    default=True,
+                    style=QSTYLE,
+                ))
+            else:
+                add_another = _ask(questionary.confirm(
+                    "Add another entity?",
+                    default=False,
+                    style=QSTYLE,
+                ))
 
-    return entities
+            if not add_another:
+                break
+            entity_number += 1
 
+        return entities
+
+    except UserAbortedError:
+        console.print(
+            "\n  [bold yellow]⚠[/bold yellow]  "
+            "Wizard annulé par l'utilisateur.\n"
+        )
+        raise SystemExit(0)
 
 # ---------------------------------------------------------------------------
 # Entity Collection
@@ -241,7 +261,7 @@ def _collect_entity(
     """Collects name, fields, and relations for an entity."""
 
     # ── Name ─────────────────────────────────────────────────────────────────
-    name = questionary.text(
+    name = _ask(questionary.text(
         "Entity name (e.g., Product):",
         default=suggested_name or "",
         validate=lambda v: (
@@ -250,7 +270,7 @@ def _collect_entity(
             else True
         ),
         style=QSTYLE,
-    ).ask()
+    ))
 
     if not name:
         return None
@@ -264,7 +284,7 @@ def _collect_entity(
     print_info(f"Configuring entity [bold cyan]{name}[/bold cyan]")
 
     while True:
-        action = questionary.select(
+        action = _ask(questionary.select(
             f"What would you like to add to {name}?",
             choices=[
                 "Add Field",
@@ -273,7 +293,7 @@ def _collect_entity(
                 "Discard Entity (Delete)"
             ],
             style=QSTYLE
-        ).ask()
+        ))
 
         if action == "Add Field":
             new_fields = _collect_fields(enums, start_number=len(fields) + 1)
@@ -290,12 +310,12 @@ def _collect_entity(
         elif action == "Save Entity & Continue":
             if not fields and not relations:
                 print_warning(f"Entity {name} has no fields and no relations.")
-                if not questionary.confirm("Are you sure you want to save it as is?", default=False, style=QSTYLE).ask():
+                if not _ask(questionary.confirm("Are you sure you want to save it as is?", default=False, style=QSTYLE)):
                     continue
             break
             
         elif action == "Discard Entity (Delete)":
-            if questionary.confirm(f"Discard entity {name}? All its fields and relations will be lost.", default=False, style=QSTYLE).ask():
+            if _ask(questionary.confirm(f"Discard entity {name}? All its fields and relations will be lost.", default=False, style=QSTYLE)):
                 return None
             continue
 
@@ -312,10 +332,10 @@ def _collect_fields(enums: list[Enum] = None, start_number: int = 1) -> list[Fie
     field_number = start_number
 
     while True:
-        field_name = questionary.text(
+        field_name = _ask(questionary.text(
             f"  Field {field_number} — Name (empty to finish):",
             style=QSTYLE,
-        ).ask()
+        ))
 
         if not field_name or not field_name.strip():
             break
@@ -328,11 +348,11 @@ def _collect_fields(enums: list[Enum] = None, start_number: int = 1) -> list[Fie
         if enums:
             type_choices.extend([f"Enum: {e.name}" for e in enums])
 
-        java_type_choice = questionary.select(
+        java_type_choice = _ask(questionary.select(
             f"  Field {field_number} — Type:",
             choices=type_choices,
             style=QSTYLE,
-        ).ask()
+        ))
 
         is_enum = False
         java_type = java_type_choice
@@ -340,11 +360,11 @@ def _collect_fields(enums: list[Enum] = None, start_number: int = 1) -> list[Fie
             is_enum = True
             java_type = java_type_choice.split("Enum: ")[1]
 
-        nullable = questionary.confirm(
+        nullable = _ask(questionary.confirm(
             f"  Field {field_number} — Nullable?",
             default=True,
             style=QSTYLE,
-        ).ask()
+        ))
 
         fields.append(Field(name=field_name, java_type=java_type, nullable=nullable, is_enum=is_enum))
         field_number += 1
@@ -362,10 +382,10 @@ def _collect_enums() -> list[Enum]:
     enum_number = 1
 
     while True:
-        name = questionary.text(
+        name = _ask(questionary.text(
             f"Enum {enum_number} — Name (empty to finish):",
             style=QSTYLE,
-        ).ask()
+        ))
 
         if not name or not name.strip():
             break
@@ -373,10 +393,10 @@ def _collect_enums() -> list[Enum]:
         name = name.strip()
         name = name[0].upper() + name[1:]
 
-        values_str = questionary.text(
+        values_str = _ask(questionary.text(
             "  Values (comma-separated, e.g., PENDING, ACTIVE):",
             style=QSTYLE,
-        ).ask()
+        ))
 
         values = [v.strip().upper() for v in values_str.split(",") if v.strip()]
         enums.append(Enum(name=name, values=values))
@@ -401,25 +421,25 @@ def _collect_relations(
     while True:
         print_info(f"Relation {relation_number} for {entity_name}")
 
-        kind = questionary.select(
+        kind = _ask(questionary.select(
             "  Relation type:",
             choices=SUPPORTED_RELATIONS,
             style=QSTYLE,
-        ).ask()
+        ))
 
         # Target: existing entities + free input (new entity to come)
         target_choices = existing_entity_names + ["[ Other — enter name ]"]
-        target_choice  = questionary.select(
+        target_choice  = _ask(questionary.select(
             "  Target entity:",
             choices=target_choices,
             style=QSTYLE,
-        ).ask()
+        ))
 
         if target_choice == "[ Other — enter name ]":
-            target = questionary.text(
+            target = _ask(questionary.text(
                 "  Target entity name:",
                 style=QSTYLE,
-            ).ask()
+            ))
             target = target.strip()
             target = target[0].upper() + target[1:]
         else:
@@ -430,18 +450,18 @@ def _collect_relations(
         owner     = True
 
         if kind in ("OneToMany", "ManyToMany"):
-            mapped_by = questionary.text(
+            mapped_by = _ask(questionary.text(
                 f"  Field name on {target} side referencing {entity_name} "
                 f"(mappedBy):",
                 default=entity_name[0].lower() + entity_name[1:] + "s",
                 style=QSTYLE,
-            ).ask()
-            owner = questionary.confirm(
+            ))
+            owner = _ask(questionary.confirm(
                 f"  Is {entity_name} the owning side "
                 f"(has the @JoinTable)?",
                 default=True,
                 style=QSTYLE,
-            ).ask()
+            ))
 
         relations.append(Relation(
             kind=kind,
@@ -450,11 +470,11 @@ def _collect_relations(
             owner=owner,
         ))
 
-        add_another = questionary.confirm(
+        add_another = _ask(questionary.confirm(
             f"Add another relation for {entity_name}?",
             default=False,
             style=QSTYLE,
-        ).ask()
+        ))
 
         if not add_another:
             break

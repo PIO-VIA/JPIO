@@ -13,12 +13,29 @@ from jpio.utils.console import (
     print_error,
     print_info,
     print_scan_table,
+    console,
 )
 
 
 @click.command("scan")
 def scan_command():
     """Display the current JPIO project state (entities, fields, relations)."""
+    try:
+        _run_scan()
+    except (KeyboardInterrupt, EOFError):
+        console.print(
+            "\n\n  [bold yellow]⚠[/bold yellow]  "
+            "Opération annulée par l'utilisateur.\n"
+        )
+        raise SystemExit(0)
+    except click.exceptions.Abort:
+        console.print(
+            "\n\n  [bold yellow]⚠[/bold yellow]  "
+            "Opération annulée.\n"
+        )
+        raise SystemExit(0)
+
+def _run_scan():
     print_banner()
 
     jpio_file = Path(".jpio.json")
